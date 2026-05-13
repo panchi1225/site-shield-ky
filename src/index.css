@@ -1,0 +1,246 @@
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-soft: #edf2f7;
+  --text: #1f2933;
+  --muted: #667085;
+  --line: #d9dee7;
+  --primary: #136f63;
+  --primary-dark: #0f5d53;
+  --warning: #b7791f;
+
+  color: var(--text);
+  background: var(--bg);
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+.app-frame {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px clamp(16px, 4vw, 40px);
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+}
+
+.brand {
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.top-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.top-nav a,
+.button-link {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.button-link.primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.top-nav a:hover,
+.button-link:hover {
+  border-color: var(--primary);
+}
+
+main {
+  flex: 1;
+}
+
+.page {
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  padding: clamp(24px, 5vw, 56px) clamp(16px, 4vw, 40px);
+}
+
+.page-header {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--primary-dark);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+h1,
+h2 {
+  margin: 0;
+  line-height: 1.25;
+}
+
+h1 {
+  max-width: 760px;
+  font-size: clamp(2rem, 7vw, 3.4rem);
+}
+
+h2 {
+  font-size: 1.2rem;
+}
+
+p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.lead {
+  max-width: 760px;
+  font-size: 1.08rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.panel,
+.status-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 18px;
+}
+
+.panel {
+  display: grid;
+  gap: 8px;
+}
+
+.status-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.status-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.status-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--surface-soft);
+}
+
+.status-list li:last-child {
+  border-bottom: 0;
+}
+
+.status-label {
+  color: var(--muted);
+}
+
+.status-value {
+  font-weight: 700;
+  text-align: right;
+}
+
+.placeholder {
+  border-left: 4px solid var(--warning);
+  background: #fffaf0;
+}
+
+.token {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+@media (max-width: 720px) {
+  .site-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .top-nav {
+    justify-content: flex-start;
+  }
+
+  .top-nav a {
+    min-height: 38px;
+    padding-inline: 12px;
+  }
+
+  .panel-grid {
+    grid-template-columns: 1fr;
+  }
+}
