@@ -4,6 +4,7 @@ import { useCompany } from '../hooks/useCompany'
 import { useKyRecords } from '../hooks/useKyRecords'
 import type { Company } from '../types/company'
 import type { KyRecord, KyRecordStatus } from '../types/kyRecord'
+import { getPrimaryWorkName } from '../utils/kyRecord'
 
 const companyTypeLabels: Record<Company['type'], string> = {
   prime: '元請',
@@ -130,19 +131,19 @@ export function CompanyWorkspacePage() {
       <section className="status-panel">
         <div className="section-heading">
           <div>
-            <h2>KY下書き一覧</h2>
-            <p>この会社で作成した下書きKYを表示します。</p>
+            <h2>KY一覧</h2>
+            <p>この会社で作成したKYを表示します。</p>
           </div>
         </div>
 
         {isKyRecordsLoading ? (
-          <p>KY下書き一覧を読み込んでいます。</p>
+          <p>KY一覧を読み込んでいます。</p>
         ) : kyRecordsErrorMessage ? (
           <div className="form-error">
-            KY下書き一覧を読み込めませんでした。{kyRecordsErrorMessage}
+            KY一覧を読み込めませんでした。{kyRecordsErrorMessage}
           </div>
         ) : kyRecords.length === 0 ? (
-          <p>作成済みのKY下書きはありません。</p>
+          <p>作成済みのKYはありません。</p>
         ) : (
           <div className="ky-record-list">
             {kyRecords.map((kyRecord) => (
@@ -198,7 +199,7 @@ function KyRecordCard({
       to={`/app/sites/${siteId}/companies/${companyId}/ky/${kyRecord.id}`}
     >
       <div>
-        <h3>{kyRecord.workName || '作業名未設定'}</h3>
+        <h3>{getPrimaryWorkName(kyRecord)}</h3>
         <p>{kyRecord.workDate || '作業日未設定'}</p>
       </div>
       <dl className="ky-record-meta">

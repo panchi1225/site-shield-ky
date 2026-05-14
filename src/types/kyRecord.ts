@@ -4,8 +4,9 @@ export type KyRecordStatus =
   | 'registered'
   | 'stamped'
 
-export type KyRecordDraftInput = {
-  workDate: string
+export type KyRecordWorkItem = {
+  id: string
+  order: number
   workName: string
   workDescription: string
   riskFactors: string
@@ -13,11 +14,18 @@ export type KyRecordDraftInput = {
   keyPoints: string
 }
 
-export type KyRecord = KyRecordDraftInput & {
+export type KyRecordDraftInput = {
+  workDate: string
+  workItems: KyRecordWorkItem[]
+}
+
+export type KyRecord = {
   id: string
   siteId: string
   companyId: string
+  workDate: string
   status: KyRecordStatus
+  workItems: KyRecordWorkItem[]
   createdBy: string
   createdByName: string
   createdAt: Date | null

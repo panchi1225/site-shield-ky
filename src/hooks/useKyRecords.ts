@@ -1,66 +1,13 @@
 import { useEffect, useState } from 'react'
-import {
-  collection,
-  getDocs,
-  query,
-  Timestamp,
-  where,
-} from 'firebase/firestore'
+import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../lib/firebase'
-import type { KyRecord, KyRecordStatus } from '../types/kyRecord'
+import type { KyRecord } from '../types/kyRecord'
+import { toKyRecord } from '../utils/kyRecord'
 
 type KyRecordsState = {
   kyRecords: KyRecord[]
   isLoading: boolean
   errorMessage: string
-}
-
-const validStatuses: KyRecordStatus[] = [
-  'draft',
-  'signature_open',
-  'registered',
-  'stamped',
-]
-
-function isKyRecordStatus(value: unknown): value is KyRecordStatus {
-  return typeof value === 'string' && validStatuses.includes(value as KyRecordStatus)
-}
-
-function toDate(value: unknown) {
-  return value instanceof Timestamp ? value.toDate() : null
-}
-
-function toNullableString(value: unknown) {
-  return typeof value === 'string' ? value : null
-}
-
-function toKyRecord(id: string, data: Record<string, unknown>): KyRecord {
-  return {
-    id,
-    siteId: typeof data.siteId === 'string' ? data.siteId : '',
-    companyId: typeof data.companyId === 'string' ? data.companyId : '',
-    workDate: typeof data.workDate === 'string' ? data.workDate : '',
-    workName: typeof data.workName === 'string' ? data.workName : '',
-    workDescription:
-      typeof data.workDescription === 'string' ? data.workDescription : '',
-    riskFactors: typeof data.riskFactors === 'string' ? data.riskFactors : '',
-    countermeasures:
-      typeof data.countermeasures === 'string' ? data.countermeasures : '',
-    keyPoints: typeof data.keyPoints === 'string' ? data.keyPoints : '',
-    status: isKyRecordStatus(data.status) ? data.status : 'draft',
-    createdBy: typeof data.createdBy === 'string' ? data.createdBy : '',
-    createdByName:
-      typeof data.createdByName === 'string' ? data.createdByName : '',
-    createdAt: toDate(data.createdAt),
-    updatedBy: typeof data.updatedBy === 'string' ? data.updatedBy : '',
-    updatedAt: toDate(data.updatedAt),
-    signatureOpenedBy: toNullableString(data.signatureOpenedBy),
-    signatureOpenAt: toDate(data.signatureOpenAt),
-    registeredBy: toNullableString(data.registeredBy),
-    registeredAt: toDate(data.registeredAt),
-    stampedBy: toNullableString(data.stampedBy),
-    stampedAt: toDate(data.stampedAt),
-  }
 }
 
 export function useKyRecords(
@@ -94,7 +41,11 @@ export function useKyRecords(
 
         const kyRecords = snapshot.docs
           .map((kyRecordDoc) => toKyRecord(kyRecordDoc.id, kyRecordDoc.data()))
-          .filter((kyRecord) => kyRecord.status === 'draft')
+          .filter((kyRecord) =>
+            ['draft', 'signature_open', 'registered', 'stamped'].includes(
+              kyRecord.status,
+            ),
+          )
           .sort((a, b) => {
             const dateCompare = b.workDate.localeCompare(a.workDate)
 

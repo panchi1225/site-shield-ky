@@ -1,19 +1,20 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { useAuth } from '../auth/AuthContext'
 import { useCompany } from '../hooks/useCompany'
 import { db } from '../lib/firebase'
-import type { KyRecordDraftInput } from '../types/kyRecord'
+import type { KyRecordDraftInput, KyRecordWorkItem } from '../types/kyRecord'
+import {
+  createEmptyWorkItem,
+  maxWorkItems,
+  normalizeWorkItems,
+} from '../utils/kyRecord'
 
 const initialFormState: KyRecordDraftInput = {
   workDate: new Date().toISOString().slice(0, 10),
-  workName: '',
-  workDescription: '',
-  riskFactors: '',
-  countermeasures: '',
-  keyPoints: '',
+  workItems: [createEmptyWorkItem(1)],
 }
 
 export function KyCreatePage() {
@@ -30,8 +31,52 @@ export function KyCreatePage() {
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  function updateField(field: keyof KyRecordDraftInput, value: string) {
-    setFormState((current) => ({ ...current, [field]: value }))
+  function updateWorkDate(value: string) {
+    setFormState((current) => ({ ...current, workDate: value }))
+  }
+
+  function updateWorkItem(
+    index: number,
+    field: keyof Omit<KyRecordWorkItem, 'id' | 'order'>,
+    value: string,
+  ) {
+    setFormState((current) => ({
+      ...current,
+      workItems: current.workItems.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item,
+      ),
+    }))
+  }
+
+  function addWorkItem() {
+    setFormState((current) => {
+      if (current.workItems.length >= maxWorkItems) {
+        return current
+      }
+
+      return {
+        ...current,
+        workItems: [
+          ...current.workItems,
+          createEmptyWorkItem(current.workItems.length + 1),
+        ],
+      }
+    })
+  }
+
+  function removeWorkItem(index: number) {
+    setFormState((current) => {
+      if (current.workItems.length <= 1) {
+        return current
+      }
+
+      return {
+        ...current,
+        workItems: normalizeWorkItems(
+          current.workItems.filter((_, itemIndex) => itemIndex !== index),
+        ),
+      }
+    })
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -42,20 +87,35 @@ export function KyCreatePage() {
       return
     }
 
+    const workItems = normalizeWorkItems(formState.workItems)
+
+    if (workItems.length < 1) {
+      setSubmitError('作業項目は最低1件必要です。')
+      return
+    }
+
     setSubmitError('')
     setIsSubmitting(true)
 
+    const kyRecordId = `${siteId}_${companyId}_${formState.workDate}`
+
     try {
-      await addDoc(collection(db, 'kyRecords'), {
+      const kyRecordRef = doc(db, 'kyRecords', kyRecordId)
+      const snapshot = await getDoc(kyRecordRef)
+
+      if (snapshot.exists()) {
+        navigate(`/app/sites/${siteId}/companies/${companyId}/ky/${kyRecordId}`, {
+          replace: true,
+        })
+        return
+      }
+
+      await setDoc(kyRecordRef, {
         siteId,
         companyId,
         workDate: formState.workDate,
-        workName: formState.workName,
-        workDescription: formState.workDescription,
-        riskFactors: formState.riskFactors,
-        countermeasures: formState.countermeasures,
-        keyPoints: formState.keyPoints,
         status: 'draft',
+        workItems,
         createdBy: user.uid,
         createdByName: appUser.displayName || appUser.email || user.email || '',
         createdAt: serverTimestamp(),
@@ -65,9 +125,11 @@ export function KyCreatePage() {
         registeredAt: null,
         stampedBy: null,
         stampedAt: null,
+        signatureOpenedBy: null,
+        signatureOpenAt: null,
       })
 
-      navigate(`/app/sites/${siteId}/companies/${companyId}`, {
+      navigate(`/app/sites/${siteId}/companies/${companyId}/ky/${kyRecordId}`, {
         replace: true,
       })
     } catch (error) {
@@ -144,7 +206,7 @@ export function KyCreatePage() {
         <p className="eyebrow">KY作成</p>
         <h1>{company.name || '会社名未設定'} のKY下書きを作成します。</h1>
         <p className="lead">
-          今回は最小項目だけを保存します。署名、健康チェック、登録、PDF生成は後で実装します。
+          1日のKYを1枚作成し、その中に作業項目を最大5件まで登録します。署名、健康チェック、登録、PDF生成は後で実装します。
         </p>
         <div className="actions">
           <BackToCompanyLink companyId={companyId} siteId={siteId} />
@@ -155,66 +217,38 @@ export function KyCreatePage() {
         <label>
           <span>作業日</span>
           <input
-            onChange={(event) => updateField('workDate', event.target.value)}
+            onChange={(event) => updateWorkDate(event.target.value)}
             required
             type="date"
             value={formState.workDate}
           />
         </label>
 
-        <label>
-          <span>作業名</span>
-          <input
-            onChange={(event) => updateField('workName', event.target.value)}
-            required
-            type="text"
-            value={formState.workName}
-          />
-        </label>
+        <div className="work-item-list">
+          {formState.workItems.map((workItem, index) => (
+            <WorkItemFields
+              canRemove={formState.workItems.length > 1}
+              index={index}
+              key={workItem.id}
+              onRemove={() => removeWorkItem(index)}
+              onUpdate={(field, value) => updateWorkItem(index, field, value)}
+              workItem={workItem}
+            />
+          ))}
+        </div>
 
-        <label>
-          <span>作業内容</span>
-          <textarea
-            onChange={(event) =>
-              updateField('workDescription', event.target.value)
-            }
-            required
-            rows={4}
-            value={formState.workDescription}
-          />
-        </label>
+        <button
+          className="button-link"
+          disabled={formState.workItems.length >= maxWorkItems}
+          onClick={addWorkItem}
+          type="button"
+        >
+          作業内容を追加
+        </button>
 
-        <label>
-          <span>危険要因</span>
-          <textarea
-            onChange={(event) => updateField('riskFactors', event.target.value)}
-            required
-            rows={4}
-            value={formState.riskFactors}
-          />
-        </label>
-
-        <label>
-          <span>対策</span>
-          <textarea
-            onChange={(event) =>
-              updateField('countermeasures', event.target.value)
-            }
-            required
-            rows={4}
-            value={formState.countermeasures}
-          />
-        </label>
-
-        <label>
-          <span>本日の重点確認事項</span>
-          <textarea
-            onChange={(event) => updateField('keyPoints', event.target.value)}
-            required
-            rows={4}
-            value={formState.keyPoints}
-          />
-        </label>
+        {formState.workItems.length >= maxWorkItems ? (
+          <p>作業項目は最大5件までです。</p>
+        ) : null}
 
         {submitError ? (
           <p className="form-error" role="alert">
@@ -227,6 +261,86 @@ export function KyCreatePage() {
         </button>
       </form>
     </section>
+  )
+}
+
+function WorkItemFields({
+  canRemove,
+  index,
+  onRemove,
+  onUpdate,
+  workItem,
+}: {
+  canRemove: boolean
+  index: number
+  onRemove: () => void
+  onUpdate: (
+    field: keyof Omit<KyRecordWorkItem, 'id' | 'order'>,
+    value: string,
+  ) => void
+  workItem: KyRecordWorkItem
+}) {
+  return (
+    <fieldset className="work-item-fields">
+      <div className="work-item-header">
+        <legend>作業項目 {index + 1}</legend>
+        {canRemove ? (
+          <button className="button-link" onClick={onRemove} type="button">
+            この作業項目を削除
+          </button>
+        ) : null}
+      </div>
+
+      <label>
+        <span>作業名</span>
+        <input
+          onChange={(event) => onUpdate('workName', event.target.value)}
+          required
+          type="text"
+          value={workItem.workName}
+        />
+      </label>
+
+      <label>
+        <span>作業内容</span>
+        <textarea
+          onChange={(event) => onUpdate('workDescription', event.target.value)}
+          required
+          rows={4}
+          value={workItem.workDescription}
+        />
+      </label>
+
+      <label>
+        <span>危険要因</span>
+        <textarea
+          onChange={(event) => onUpdate('riskFactors', event.target.value)}
+          required
+          rows={4}
+          value={workItem.riskFactors}
+        />
+      </label>
+
+      <label>
+        <span>対策</span>
+        <textarea
+          onChange={(event) => onUpdate('countermeasures', event.target.value)}
+          required
+          rows={4}
+          value={workItem.countermeasures}
+        />
+      </label>
+
+      <label>
+        <span>本日の重点確認事項</span>
+        <textarea
+          onChange={(event) => onUpdate('keyPoints', event.target.value)}
+          required
+          rows={4}
+          value={workItem.keyPoints}
+        />
+      </label>
+    </fieldset>
   )
 }
 

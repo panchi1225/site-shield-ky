@@ -4,7 +4,8 @@ import { doc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { useAuth } from '../auth/AuthContext'
 import { useKyRecord } from '../hooks/useKyRecord'
 import { db } from '../lib/firebase'
-import type { KyRecordStatus } from '../types/kyRecord'
+import type { KyRecordStatus, KyRecordWorkItem } from '../types/kyRecord'
+import { getPrimaryWorkName } from '../utils/kyRecord'
 
 const kyStatusLabels: Record<KyRecordStatus, string> = {
   draft: '下書き',
@@ -133,7 +134,7 @@ export function KyDetailPage() {
     <section className="page ky-detail-page">
       <div className="page-header">
         <p className="eyebrow">KY詳細</p>
-        <h1>{kyRecord.workName || '作業名未設定'}</h1>
+        <h1>{getPrimaryWorkName(kyRecord)}</h1>
         <p className="lead">
           保存済みのKY下書き内容を表示します。編集・署名受付・PDF出力は後で実装します。
         </p>
@@ -170,7 +171,7 @@ export function KyDetailPage() {
         <h2>KY情報</h2>
         <ul className="status-list">
           <DetailRow label="作業日" value={kyRecord.workDate} />
-          <DetailRow label="作業名" value={kyRecord.workName} />
+          <DetailRow label="代表作業名" value={getPrimaryWorkName(kyRecord)} />
           <DetailRow label="status" value={kyStatusLabels[kyRecord.status]} />
           <DetailRow label="作成者名" value={kyRecord.createdByName} />
           <DetailRow label="作成日時" value={formatDateTime(kyRecord.createdAt)} />
@@ -180,11 +181,10 @@ export function KyDetailPage() {
 
       <section className="status-panel">
         <h2>KY内容</h2>
-        <div className="detail-grid">
-          <DetailBlock label="作業内容" value={kyRecord.workDescription} />
-          <DetailBlock label="危険要因" value={kyRecord.riskFactors} />
-          <DetailBlock label="対策" value={kyRecord.countermeasures} />
-          <DetailBlock label="本日の重点確認事項" value={kyRecord.keyPoints} />
+        <div className="work-item-detail-list">
+          {kyRecord.workItems.map((workItem) => (
+            <WorkItemDetail key={workItem.id} workItem={workItem} />
+          ))}
         </div>
       </section>
 
@@ -211,6 +211,22 @@ function DetailBlock({ label, value }: { label: string; value: string }) {
       <h3>{label}</h3>
       <p>{value || '未設定'}</p>
     </div>
+  )
+}
+
+function WorkItemDetail({ workItem }: { workItem: KyRecordWorkItem }) {
+  return (
+    <article className="work-item-detail">
+      <h3>
+        作業項目 {workItem.order}: {workItem.workName || '作業名未設定'}
+      </h3>
+      <div className="detail-grid">
+        <DetailBlock label="作業内容" value={workItem.workDescription} />
+        <DetailBlock label="危険要因" value={workItem.riskFactors} />
+        <DetailBlock label="対策" value={workItem.countermeasures} />
+        <DetailBlock label="本日の重点確認事項" value={workItem.keyPoints} />
+      </div>
+    </article>
   )
 }
 
