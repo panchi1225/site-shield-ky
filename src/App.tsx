@@ -1,6 +1,7 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppShellPage } from './pages/AppShellPage'
+import { CompanyWorkspacePage } from './pages/CompanyWorkspacePage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { SignPage } from './pages/SignPage'
@@ -39,6 +40,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <SiteWorkspacePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/app/sites/:siteId/companies/:companyId"
+            element={
+              <ProtectedRoute>
+                <CompanyWorkspacePage />
               </ProtectedRoute>
             }
           />

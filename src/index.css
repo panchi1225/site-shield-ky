@@ -327,7 +327,9 @@ p {
   gap: 16px;
   border: 1px solid var(--surface-soft);
   border-radius: 8px;
+  color: inherit;
   padding: 14px;
+  text-decoration: none;
 }
 
 .site-item h3 {
@@ -341,6 +343,10 @@ p {
 }
 
 .site-link:hover {
+  border-color: var(--primary);
+}
+
+.company-link:hover {
   border-color: var(--primary);
 }
 

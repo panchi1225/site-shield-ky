@@ -164,7 +164,11 @@ function AdminCompaniesPanel({ siteId }: { siteId: string }) {
       ) : (
         <div className="company-list">
           {companies.map((company) => (
-            <CompanyListItem company={company} key={company.id} />
+            <CompanyListItem
+              company={company}
+              key={company.id}
+              siteId={siteId}
+            />
           ))}
         </div>
       )}
@@ -172,9 +176,18 @@ function AdminCompaniesPanel({ siteId }: { siteId: string }) {
   )
 }
 
-function CompanyListItem({ company }: { company: Company }) {
+function CompanyListItem({
+  company,
+  siteId,
+}: {
+  company: Company
+  siteId: string
+}) {
   return (
-    <article className="company-item">
+    <Link
+      className="company-item company-link"
+      to={`/app/sites/${siteId}/companies/${company.id}`}
+    >
       <div>
         <h3>{company.name || '会社名未設定'}</h3>
         <p>{companyTypeLabels[company.type]}</p>
@@ -184,6 +197,6 @@ function CompanyListItem({ company }: { company: Company }) {
       >
         {company.active ? '有効' : '無効'}
       </span>
-    </article>
+    </Link>
   )
 }
