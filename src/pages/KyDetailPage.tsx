@@ -90,6 +90,14 @@ export function KyDetailPage() {
         </p>
         <div className="actions">
           <BackToCompanyLink companyId={companyId} siteId={siteId} />
+          {kyRecord.status === 'draft' ? (
+            <Link
+              className="button-link primary"
+              to={`/app/sites/${siteId}/companies/${companyId}/ky/${kyRecord.id}/edit`}
+            >
+              編集
+            </Link>
+          ) : null}
         </div>
       </div>
 

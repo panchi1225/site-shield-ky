@@ -5,6 +5,7 @@ import { CompanyWorkspacePage } from './pages/CompanyWorkspacePage'
 import { HomePage } from './pages/HomePage'
 import { KyCreatePage } from './pages/KyCreatePage'
 import { KyDetailPage } from './pages/KyDetailPage'
+import { KyEditPage } from './pages/KyEditPage'
 import { LoginPage } from './pages/LoginPage'
 import { SignPage } from './pages/SignPage'
 import { SiteWorkspacePage } from './pages/SiteWorkspacePage'
@@ -66,6 +67,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <KyDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/app/sites/:siteId/companies/:companyId/ky/:kyRecordId/edit"
+            element={
+              <ProtectedRoute>
+                <KyEditPage />
               </ProtectedRoute>
             }
           />
