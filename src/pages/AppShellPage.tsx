@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { useSites } from '../hooks/useSites'
+import type { Site } from '../types/site'
 import type { UserRole } from '../types/user'
 
 const roleLabels: Record<UserRole, string> = {
@@ -44,8 +46,8 @@ export function AppShellPage() {
         <p className="eyebrow">ログイン済み画面</p>
         <h1>ユーザー情報を読み込み、role別の仮画面を表示します。</h1>
         <p className="lead">
-          今回はFirestoreのusersドキュメントを読むところまでです。
-          現場管理、会社管理、KY作成はまだ実装していません。
+          今回は管理者だけが現場一覧を閲覧できます。
+          現場の新規作成、編集、削除はまだ実装していません。
         </p>
       </div>
 
@@ -86,7 +88,7 @@ export function AppShellPage() {
         <h2>今回まだ実装しない機能</h2>
         <ul className="status-list">
           <li>
-            <span className="status-label">現場管理</span>
+            <span className="status-label">現場の新規作成・編集・削除</span>
             <span className="status-value">未実装</span>
           </li>
           <li>
@@ -152,27 +154,82 @@ function RolePanel({
   }
 
   return (
-    <div className="status-panel role-panel">
-      <h2>{roleLabels[appUser.role]} 用の仮画面</h2>
-      <p>{roleDescriptions[appUser.role]}</p>
-      <ul className="status-list">
-        <li>
-          <span className="status-label">表示名</span>
-          <span className="status-value">{appUser.displayName || '未設定'}</span>
-        </li>
-        <li>
-          <span className="status-label">role</span>
-          <span className="status-value">{appUser.role}</span>
-        </li>
-        <li>
-          <span className="status-label">siteIds</span>
-          <span className="status-value">{appUser.siteIds.length} 件</span>
-        </li>
-        <li>
-          <span className="status-label">companyIds</span>
-          <span className="status-value">{appUser.companyIds.length} 件</span>
-        </li>
-      </ul>
+    <>
+      <div className="status-panel role-panel">
+        <h2>{roleLabels[appUser.role]} 用の仮画面</h2>
+        <p>{roleDescriptions[appUser.role]}</p>
+        <ul className="status-list">
+          <li>
+            <span className="status-label">表示名</span>
+            <span className="status-value">{appUser.displayName || '未設定'}</span>
+          </li>
+          <li>
+            <span className="status-label">role</span>
+            <span className="status-value">{appUser.role}</span>
+          </li>
+          <li>
+            <span className="status-label">siteIds</span>
+            <span className="status-value">{appUser.siteIds.length} 件</span>
+          </li>
+          <li>
+            <span className="status-label">companyIds</span>
+            <span className="status-value">{appUser.companyIds.length} 件</span>
+          </li>
+        </ul>
+      </div>
+
+      {appUser.role === 'admin' ? <AdminSitesPanel /> : null}
+    </>
+  )
+}
+
+function AdminSitesPanel() {
+  const { errorMessage, isLoading, sites } = useSites(true)
+
+  if (isLoading) {
+    return (
+      <div className="status-panel">
+        <h2>現場一覧を読み込んでいます</h2>
+        <p>Firestoreのsitesコレクションを確認しています。</p>
+      </div>
+    )
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="status-panel warning-panel">
+        <h2>現場一覧を読み込めませんでした</h2>
+        <p>{errorMessage}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="status-panel">
+      <h2>現場一覧</h2>
+      {sites.length === 0 ? (
+        <p>現場が登録されていません。</p>
+      ) : (
+        <div className="site-list">
+          {sites.map((site) => (
+            <SiteListItem key={site.id} site={site} />
+          ))}
+        </div>
+      )}
     </div>
+  )
+}
+
+function SiteListItem({ site }: { site: Site }) {
+  return (
+    <article className="site-item">
+      <div>
+        <h3>{site.name || '名称未設定'}</h3>
+        <p>{site.address || '住所未設定'}</p>
+      </div>
+      <span className={site.active ? 'status-badge active' : 'status-badge'}>
+        {site.active ? '有効' : '無効'}
+      </span>
+    </article>
   )
 }
