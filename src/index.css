@@ -224,6 +224,15 @@ p {
   background: #fffaf0;
 }
 
+.warning-panel {
+  border-left: 4px solid #c2410c;
+  background: #fff7ed;
+}
+
+.role-panel {
+  border-left: 4px solid var(--primary);
+}
+
 .token {
   overflow-wrap: anywhere;
   color: var(--text);
