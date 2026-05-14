@@ -7,11 +7,14 @@ export function HomePage() {
         <p className="eyebrow">リスクアセスメントKY</p>
         <h1>現場ごとのKY作成、署名、閲覧の土台を準備しました。</h1>
         <p className="lead">
-          この初期版では、GitHub Pages公開を前提にした画面遷移とFirebase接続の準備だけを入れています。
-          ログイン、KY作成、署名、PDF生成は次の段階で実装します。
+          GitHub Pages公開、Firebase接続、メール/パスワードログインの最小構成を用意しています。
+          KY作成、署名、QR、PDF生成は次の段階で実装します。
         </p>
         <div className="actions">
-          <Link className="button-link primary" to="/app">
+          <Link className="button-link primary" to="/login">
+            ログイン
+          </Link>
+          <Link className="button-link" to="/app">
             アプリ画面へ
           </Link>
           <Link className="button-link" to="/view/sample-token">
@@ -23,7 +26,7 @@ export function HomePage() {
       <div className="panel-grid">
         <article className="panel">
           <h2>公開</h2>
-          <p>GitHub Pages用にViteのbase設定を行っています。</p>
+          <p>GitHub Pages用にViteのbase設定とActions公開設定を行っています。</p>
         </article>
         <article className="panel">
           <h2>Firebase</h2>
@@ -31,7 +34,7 @@ export function HomePage() {
         </article>
         <article className="panel">
           <h2>画面遷移</h2>
-          <p>トップ、ログイン後アプリ、署名QR、閲覧QRの仮ルートを用意しています。</p>
+          <p>トップ、ログイン、ログイン後アプリ、署名QR、閲覧QRの仮ルートを用意しています。</p>
         </article>
       </div>
     </section>
