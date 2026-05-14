@@ -1,11 +1,20 @@
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { useCompany } from '../hooks/useCompany'
+import { useKyRecords } from '../hooks/useKyRecords'
 import type { Company } from '../types/company'
+import type { KyRecord, KyRecordStatus } from '../types/kyRecord'
 
 const companyTypeLabels: Record<Company['type'], string> = {
   prime: '元請',
   subcontractor: '下請',
+}
+
+const kyStatusLabels: Record<KyRecordStatus, string> = {
+  draft: '下書き',
+  signature_open: '署名受付中',
+  registered: '登録済み',
+  stamped: '押印済み',
 }
 
 export function CompanyWorkspacePage() {
@@ -16,6 +25,13 @@ export function CompanyWorkspacePage() {
     companyId,
     canViewCompany,
   )
+  const canViewKyRecords =
+    canViewCompany && Boolean(company) && company?.siteId === siteId
+  const {
+    kyRecords,
+    errorMessage: kyRecordsErrorMessage,
+    isLoading: isKyRecordsLoading,
+  } = useKyRecords(siteId, companyId, canViewKyRecords)
 
   if (!canViewCompany) {
     return (
@@ -111,6 +127,31 @@ export function CompanyWorkspacePage() {
         </ul>
       </div>
 
+      <section className="status-panel">
+        <div className="section-heading">
+          <div>
+            <h2>KY下書き一覧</h2>
+            <p>この会社で作成した下書きKYを表示します。</p>
+          </div>
+        </div>
+
+        {isKyRecordsLoading ? (
+          <p>KY下書き一覧を読み込んでいます。</p>
+        ) : kyRecordsErrorMessage ? (
+          <div className="form-error">
+            KY下書き一覧を読み込めませんでした。{kyRecordsErrorMessage}
+          </div>
+        ) : kyRecords.length === 0 ? (
+          <p>作成済みのKY下書きはありません。</p>
+        ) : (
+          <div className="ky-record-list">
+            {kyRecords.map((kyRecord) => (
+              <KyRecordCard kyRecord={kyRecord} key={kyRecord.id} />
+            ))}
+          </div>
+        )}
+      </section>
+
       <div className="workspace-grid">
         <section className="status-panel placeholder">
           <h2>KY作成</h2>
@@ -135,6 +176,42 @@ export function CompanyWorkspacePage() {
       </div>
     </section>
   )
+}
+
+function KyRecordCard({ kyRecord }: { kyRecord: KyRecord }) {
+  return (
+    <article className="ky-record-item">
+      <div>
+        <h3>{kyRecord.workName || '作業名未設定'}</h3>
+        <p>{kyRecord.workDate || '作業日未設定'}</p>
+      </div>
+      <dl className="ky-record-meta">
+        <div>
+          <dt>status</dt>
+          <dd>{kyStatusLabels[kyRecord.status]}</dd>
+        </div>
+        <div>
+          <dt>作成者</dt>
+          <dd>{kyRecord.createdByName || '未設定'}</dd>
+        </div>
+        <div>
+          <dt>更新日時</dt>
+          <dd>{formatDateTime(kyRecord.updatedAt)}</dd>
+        </div>
+      </dl>
+    </article>
+  )
+}
+
+function formatDateTime(value: Date | null) {
+  if (!value) {
+    return '未設定'
+  }
+
+  return new Intl.DateTimeFormat('ja-JP', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(value)
 }
 
 function BackToSiteLink({ siteId }: { siteId: string | undefined }) {

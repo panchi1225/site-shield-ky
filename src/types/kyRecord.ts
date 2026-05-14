@@ -12,3 +12,19 @@ export type KyRecordDraftInput = {
   countermeasures: string
   keyPoints: string
 }
+
+export type KyRecord = KyRecordDraftInput & {
+  id: string
+  siteId: string
+  companyId: string
+  status: KyRecordStatus
+  createdBy: string
+  createdByName: string
+  createdAt: Date | null
+  updatedBy: string
+  updatedAt: Date | null
+  registeredBy: string | null
+  registeredAt: Date | null
+  stampedBy: string | null
+  stampedAt: Date | null
+}

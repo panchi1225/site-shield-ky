@@ -326,6 +326,11 @@ p {
   gap: 10px;
 }
 
+.ky-record-list {
+  display: grid;
+  gap: 10px;
+}
+
 .site-item {
   display: flex;
   align-items: center;
@@ -358,6 +363,41 @@ p {
 .company-item h3 {
   margin: 0 0 4px;
   font-size: 1rem;
+}
+
+.ky-record-item {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--surface-soft);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.ky-record-item h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.ky-record-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.ky-record-meta div {
+  display: grid;
+  gap: 3px;
+}
+
+.ky-record-meta dt {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.ky-record-meta dd {
+  margin: 0;
+  font-weight: 700;
 }
 
 .site-link:hover {
@@ -425,6 +465,10 @@ p {
   .company-item {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .ky-record-meta {
+    grid-template-columns: 1fr;
   }
 
   .section-heading {
