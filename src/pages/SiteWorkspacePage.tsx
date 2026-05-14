@@ -1,6 +1,13 @@
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { useCompanies } from '../hooks/useCompanies'
 import { useSite } from '../hooks/useSite'
+import type { Company } from '../types/company'
+
+const companyTypeLabels: Record<Company['type'], string> = {
+  prime: '元請',
+  subcontractor: '下請',
+}
 
 export function SiteWorkspacePage() {
   const { siteId } = useParams()
@@ -99,6 +106,8 @@ export function SiteWorkspacePage() {
         </ul>
       </div>
 
+      <AdminCompaniesPanel siteId={site.id} />
+
       <div className="workspace-grid">
         <section className="status-panel placeholder">
           <h2>KY作成・閲覧・印刷</h2>
@@ -107,7 +116,7 @@ export function SiteWorkspacePage() {
 
         <section className="status-panel placeholder">
           <h2>会社管理・下請け責任者登録</h2>
-          <p>この現場の会社管理・下請け責任者登録は後で実装します。</p>
+          <p>会社の新規作成・編集・削除、下請け責任者登録は後で実装します。</p>
         </section>
 
         <section className="status-panel placeholder">
@@ -116,5 +125,65 @@ export function SiteWorkspacePage() {
         </section>
       </div>
     </section>
+  )
+}
+
+function AdminCompaniesPanel({ siteId }: { siteId: string }) {
+  const { companies, errorMessage, isLoading } = useCompanies(siteId, true)
+
+  if (isLoading) {
+    return (
+      <div className="status-panel">
+        <h2>会社一覧を読み込んでいます</h2>
+        <p>Firestoreのcompaniesコレクションを確認しています。</p>
+      </div>
+    )
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="status-panel warning-panel">
+        <h2>会社一覧を読み込めませんでした</h2>
+        <p>{errorMessage}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="status-panel">
+      <div className="section-heading">
+        <div>
+          <h2>会社一覧</h2>
+          <p>この現場に紐づく会社だけを表示しています。</p>
+        </div>
+        <span className="status-badge">会社追加は後で実装</span>
+      </div>
+
+      {companies.length === 0 ? (
+        <p>この現場に会社が登録されていません。</p>
+      ) : (
+        <div className="company-list">
+          {companies.map((company) => (
+            <CompanyListItem company={company} key={company.id} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CompanyListItem({ company }: { company: Company }) {
+  return (
+    <article className="company-item">
+      <div>
+        <h3>{company.name || '会社名未設定'}</h3>
+        <p>{companyTypeLabels[company.type]}</p>
+      </div>
+      <span
+        className={company.active ? 'status-badge active' : 'status-badge'}
+      >
+        {company.active ? '有効' : '無効'}
+      </span>
+    </article>
   )
 }
