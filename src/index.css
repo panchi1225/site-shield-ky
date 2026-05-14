@@ -263,14 +263,17 @@ p {
   gap: 16px;
 }
 
-.auth-form label {
+.auth-form label,
+.data-form label {
   display: grid;
   gap: 6px;
   color: var(--text);
   font-weight: 700;
 }
 
-.auth-form input {
+.auth-form input,
+.data-form input,
+.data-form textarea {
   width: 100%;
   min-height: 44px;
   border: 1px solid var(--line);
@@ -280,9 +283,24 @@ p {
   color: var(--text);
 }
 
-.auth-form input:focus {
+.data-form textarea {
+  resize: vertical;
+}
+
+.auth-form input:focus,
+.data-form input:focus,
+.data-form textarea:focus {
   border-color: var(--primary);
   outline: 3px solid rgba(19, 111, 99, 0.16);
+}
+
+.data-form {
+  display: grid;
+  gap: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: clamp(18px, 4vw, 28px);
 }
 
 .form-error {

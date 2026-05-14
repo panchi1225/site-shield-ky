@@ -115,6 +115,12 @@ export function CompanyWorkspacePage() {
         <section className="status-panel placeholder">
           <h2>KY作成</h2>
           <p>この会社のKY作成機能は後で実装します。</p>
+          <Link
+            className="button-link primary"
+            to={`/app/sites/${siteId}/companies/${company.id}/ky/new`}
+          >
+            KY作成
+          </Link>
         </section>
 
         <section className="status-panel placeholder">
