@@ -49,6 +49,8 @@ function toKyRecord(id: string, data: Record<string, unknown>): KyRecord {
     createdAt: toDate(data.createdAt),
     updatedBy: typeof data.updatedBy === 'string' ? data.updatedBy : '',
     updatedAt: toDate(data.updatedAt),
+    signatureOpenedBy: toNullableString(data.signatureOpenedBy),
+    signatureOpenAt: toDate(data.signatureOpenAt),
     registeredBy: toNullableString(data.registeredBy),
     registeredAt: toDate(data.registeredAt),
     stampedBy: toNullableString(data.stampedBy),
@@ -59,6 +61,7 @@ function toKyRecord(id: string, data: Record<string, unknown>): KyRecord {
 export function useKyRecord(
   kyRecordId: string | undefined,
   enabled: boolean,
+  reloadKey = 0,
 ) {
   const [state, setState] = useState<KyRecordState>({
     kyRecord: null,
@@ -133,7 +136,7 @@ export function useKyRecord(
     return () => {
       isActive = false
     }
-  }, [enabled, kyRecordId])
+  }, [enabled, kyRecordId, reloadKey])
 
   return state
 }

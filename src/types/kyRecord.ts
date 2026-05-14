@@ -23,6 +23,8 @@ export type KyRecord = KyRecordDraftInput & {
   createdAt: Date | null
   updatedBy: string
   updatedAt: Date | null
+  signatureOpenedBy: string | null
+  signatureOpenAt: Date | null
   registeredBy: string | null
   registeredAt: Date | null
   stampedBy: string | null

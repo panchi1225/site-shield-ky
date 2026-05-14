@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { doc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { useAuth } from '../auth/AuthContext'
 import { useKyRecord } from '../hooks/useKyRecord'
+import { db } from '../lib/firebase'
 import type { KyRecordStatus } from '../types/kyRecord'
 
 const kyStatusLabels: Record<KyRecordStatus, string> = {
@@ -12,12 +15,58 @@ const kyStatusLabels: Record<KyRecordStatus, string> = {
 
 export function KyDetailPage() {
   const { companyId, kyRecordId, siteId } = useParams()
-  const { appUser } = useAuth()
+  const { appUser, user } = useAuth()
   const canViewKyRecord = appUser?.role === 'admin'
+  const [reloadKey, setReloadKey] = useState(0)
+  const [actionError, setActionError] = useState('')
+  const [isOpeningSignature, setIsOpeningSignature] = useState(false)
   const { errorMessage, isLoading, isMissing, kyRecord } = useKyRecord(
     kyRecordId,
     canViewKyRecord,
+    reloadKey,
   )
+
+  async function handleOpenSignature() {
+    if (!user || !kyRecordId || !kyRecord) {
+      setActionError('署名受付開始に必要な情報が不足しています。')
+      return
+    }
+
+    if (kyRecord.status !== 'draft') {
+      setActionError('下書き状態のKYだけ署名受付を開始できます。')
+      return
+    }
+
+    const shouldOpen = window.confirm(
+      'このKYの署名受付を開始します。開始後は下書き編集できません。よろしいですか？',
+    )
+
+    if (!shouldOpen) {
+      return
+    }
+
+    setActionError('')
+    setIsOpeningSignature(true)
+
+    try {
+      await updateDoc(doc(db, 'kyRecords', kyRecordId), {
+        status: 'signature_open',
+        updatedBy: user.uid,
+        updatedAt: serverTimestamp(),
+        signatureOpenedBy: user.uid,
+        signatureOpenAt: serverTimestamp(),
+      })
+      setReloadKey((current) => current + 1)
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : '署名受付の開始に失敗しました。',
+      )
+    } finally {
+      setIsOpeningSignature(false)
+    }
+  }
 
   if (!canViewKyRecord) {
     return (
@@ -98,8 +147,24 @@ export function KyDetailPage() {
               編集
             </Link>
           ) : null}
+          {kyRecord.status === 'draft' ? (
+            <button
+              className="button-link primary"
+              disabled={isOpeningSignature}
+              onClick={handleOpenSignature}
+              type="button"
+            >
+              {isOpeningSignature ? '開始中...' : '署名受付を開始する'}
+            </button>
+          ) : null}
         </div>
       </div>
+
+      {actionError ? (
+        <p className="form-error" role="alert">
+          {actionError}
+        </p>
+      ) : null}
 
       <section className="status-panel role-panel">
         <h2>KY情報</h2>
