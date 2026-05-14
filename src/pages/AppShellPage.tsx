@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { useSites } from '../hooks/useSites'
 import type { Site } from '../types/site'
@@ -12,10 +12,11 @@ const roleLabels: Record<UserRole, string> = {
 }
 
 const roleDescriptions: Record<UserRole, string> = {
-  admin: '全現場、全会社、全機能を管理するための画面をここに追加します。',
-  prime_manager: '自身の現場を選択し、全会社のKYを確認する画面をここに追加します。',
+  admin: '全現場を選択できます。将来的に現場追加、会社管理、下請け責任者登録を行います。',
+  prime_manager:
+    '担当現場を選択できます。将来的に全会社KY確認、PDF印刷、電子印鑑を行います。',
   subcontractor_manager:
-    '紐づけられた現場と自社分のKYを管理する画面をここに追加します。',
+    '紐づいた現場を選択できます。将来的に自社分のKY作成、署名確認、登録を行います。',
 }
 
 export function AppShellPage() {
@@ -43,11 +44,11 @@ export function AppShellPage() {
   return (
     <section className="page app-dashboard">
       <div className="page-header">
-        <p className="eyebrow">ログイン済み画面</p>
-        <h1>ユーザー情報を読み込み、role別の仮画面を表示します。</h1>
+        <p className="eyebrow">現場選択</p>
+        <h1>利用する現場を選択します。</h1>
         <p className="lead">
-          今回は管理者だけが現場一覧を閲覧できます。
-          現場の新規作成、編集、削除はまだ実装していません。
+          ここは実作業画面ではなく、現場ごとの作業トップへ入る入口です。
+          現場追加ボタンは次の段階で配置します。
         </p>
       </div>
 
@@ -83,24 +84,6 @@ export function AppShellPage() {
         appUserError={appUserError}
         appUserStatus={appUserStatus}
       />
-
-      <div className="status-panel placeholder">
-        <h2>今回まだ実装しない機能</h2>
-        <ul className="status-list">
-          <li>
-            <span className="status-label">現場の新規作成・編集・削除</span>
-            <span className="status-value">未実装</span>
-          </li>
-          <li>
-            <span className="status-label">会社管理</span>
-            <span className="status-value">未実装</span>
-          </li>
-          <li>
-            <span className="status-label">KY作成</span>
-            <span className="status-value">未実装</span>
-          </li>
-        </ul>
-      </div>
     </section>
   )
 }
@@ -156,7 +139,7 @@ function RolePanel({
   return (
     <>
       <div className="status-panel role-panel">
-        <h2>{roleLabels[appUser.role]} 用の仮画面</h2>
+        <h2>{roleLabels[appUser.role]} 用の入口</h2>
         <p>{roleDescriptions[appUser.role]}</p>
         <ul className="status-list">
           <li>
@@ -206,7 +189,13 @@ function AdminSitesPanel() {
 
   return (
     <div className="status-panel">
-      <h2>現場一覧</h2>
+      <div className="section-heading">
+        <div>
+          <h2>現場一覧</h2>
+          <p>現場を選択すると、その現場の作業トップへ移動します。</p>
+        </div>
+        <span className="status-badge">現場追加は後で実装</span>
+      </div>
       {sites.length === 0 ? (
         <p>現場が登録されていません。</p>
       ) : (
@@ -222,7 +211,7 @@ function AdminSitesPanel() {
 
 function SiteListItem({ site }: { site: Site }) {
   return (
-    <article className="site-item">
+    <Link className="site-item site-link" to={`/app/sites/${site.id}`}>
       <div>
         <h3>{site.name || '名称未設定'}</h3>
         <p>{site.address || '住所未設定'}</p>
@@ -230,6 +219,6 @@ function SiteListItem({ site }: { site: Site }) {
       <span className={site.active ? 'status-badge active' : 'status-badge'}>
         {site.active ? '有効' : '無効'}
       </span>
-    </article>
+    </Link>
   )
 }

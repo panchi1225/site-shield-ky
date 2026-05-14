@@ -310,12 +310,25 @@ p {
   gap: 16px;
   border: 1px solid var(--surface-soft);
   border-radius: 8px;
+  color: inherit;
   padding: 14px;
+  text-decoration: none;
 }
 
 .site-item h3 {
   margin: 0 0 4px;
   font-size: 1rem;
+}
+
+.site-link:hover {
+  border-color: var(--primary);
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .status-badge {
@@ -333,6 +346,12 @@ p {
 .status-badge.active {
   background: #e7f8f2;
   color: var(--primary-dark);
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 @media (max-width: 720px) {
@@ -357,5 +376,13 @@ p {
   .site-item {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .section-heading {
+    flex-direction: column;
+  }
+
+  .workspace-grid {
+    grid-template-columns: 1fr;
   }
 }

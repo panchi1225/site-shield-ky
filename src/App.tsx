@@ -4,6 +4,7 @@ import { AppShellPage } from './pages/AppShellPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { SignPage } from './pages/SignPage'
+import { SiteWorkspacePage } from './pages/SiteWorkspacePage'
 import { ViewPage } from './pages/ViewPage'
 
 function App() {
@@ -30,6 +31,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <AppShellPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/app/sites/:siteId"
+            element={
+              <ProtectedRoute>
+                <SiteWorkspacePage />
               </ProtectedRoute>
             }
           />
