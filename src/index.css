@@ -370,7 +370,9 @@ p {
   gap: 12px;
   border: 1px solid var(--surface-soft);
   border-radius: 8px;
+  color: inherit;
   padding: 14px;
+  text-decoration: none;
 }
 
 .ky-record-item h3 {
@@ -398,6 +400,32 @@ p {
 .ky-record-meta dd {
   margin: 0;
   font-weight: 700;
+}
+
+.ky-record-link:hover {
+  border-color: var(--primary);
+}
+
+.detail-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.detail-block {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--surface-soft);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.detail-block h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.detail-block p {
+  white-space: pre-wrap;
 }
 
 .site-link:hover {

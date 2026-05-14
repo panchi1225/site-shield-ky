@@ -146,7 +146,12 @@ export function CompanyWorkspacePage() {
         ) : (
           <div className="ky-record-list">
             {kyRecords.map((kyRecord) => (
-              <KyRecordCard kyRecord={kyRecord} key={kyRecord.id} />
+              <KyRecordCard
+                companyId={company.id}
+                kyRecord={kyRecord}
+                key={kyRecord.id}
+                siteId={siteId}
+              />
             ))}
           </div>
         )}
@@ -178,9 +183,20 @@ export function CompanyWorkspacePage() {
   )
 }
 
-function KyRecordCard({ kyRecord }: { kyRecord: KyRecord }) {
+function KyRecordCard({
+  companyId,
+  kyRecord,
+  siteId,
+}: {
+  companyId: string
+  kyRecord: KyRecord
+  siteId: string | undefined
+}) {
   return (
-    <article className="ky-record-item">
+    <Link
+      className="ky-record-item ky-record-link"
+      to={`/app/sites/${siteId}/companies/${companyId}/ky/${kyRecord.id}`}
+    >
       <div>
         <h3>{kyRecord.workName || '作業名未設定'}</h3>
         <p>{kyRecord.workDate || '作業日未設定'}</p>
@@ -199,7 +215,7 @@ function KyRecordCard({ kyRecord }: { kyRecord: KyRecord }) {
           <dd>{formatDateTime(kyRecord.updatedAt)}</dd>
         </div>
       </dl>
-    </article>
+    </Link>
   )
 }
 
