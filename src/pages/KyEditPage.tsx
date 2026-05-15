@@ -8,15 +8,26 @@ import { db } from '../lib/firebase'
 import type { KyRecordDraftInput, KyRecordWorkItem } from '../types/kyRecord'
 import {
   createEmptyWorkItem,
+  getPossibilityLabel,
   getPrimaryWorkName,
+  getSeverityLabel,
   maxWorkItems,
   normalizeWorkItems,
+  possibilityOptions,
+  riskLevelDescriptions,
+  severityOptions,
 } from '../utils/kyRecord'
 
 const emptyFormState: KyRecordDraftInput = {
   workDate: '',
+  weather: '',
   workItems: [createEmptyWorkItem(1)],
 }
+
+type WorkItemEditableField = keyof Omit<
+  KyRecordWorkItem,
+  'id' | 'order' | 'riskScore' | 'riskLevel'
+>
 
 export function KyEditPage() {
   const navigate = useNavigate()
@@ -39,19 +50,29 @@ export function KyEditPage() {
 
     setFormState({
       workDate: kyRecord.workDate,
+      weather: kyRecord.weather,
       workItems: normalizeWorkItems(kyRecord.workItems),
     })
   }, [kyRecord])
 
+  function updateFormField(
+    field: keyof Omit<KyRecordDraftInput, 'workItems'>,
+    value: string,
+  ) {
+    setFormState((current) => ({ ...current, [field]: value }))
+  }
+
   function updateWorkItem(
     index: number,
-    field: keyof Omit<KyRecordWorkItem, 'id' | 'order'>,
-    value: string,
+    field: WorkItemEditableField,
+    value: string | number,
   ) {
     setFormState((current) => ({
       ...current,
-      workItems: current.workItems.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, [field]: value } : item,
+      workItems: normalizeWorkItems(
+        current.workItems.map((item, itemIndex) =>
+          itemIndex === index ? { ...item, [field]: value } : item,
+        ),
       ),
     }))
   }
@@ -98,7 +119,7 @@ export function KyEditPage() {
     const workItems = normalizeWorkItems(formState.workItems)
 
     if (workItems.length < 1) {
-      setSubmitError('作業項目は最低1件必要です。')
+      setSubmitError('作業内容は最低1件必要です。')
       return
     }
 
@@ -107,6 +128,7 @@ export function KyEditPage() {
 
     try {
       await updateDoc(doc(db, 'kyRecords', kyRecordId), {
+        weather: formState.weather.trim(),
         workItems,
         updatedBy: user.uid,
         updatedAt: serverTimestamp(),
@@ -211,9 +233,9 @@ export function KyEditPage() {
     <section className="page ky-edit-page">
       <div className="page-header">
         <p className="eyebrow">KY編集</p>
-        <h1>{getPrimaryWorkName(kyRecord)} を編集します。</h1>
+        <h1>{getPrimaryWorkName(kyRecord)} を編集します</h1>
         <p className="lead">
-          下書き状態のKYだけ編集できます。作業項目は最大5件までです。
+          Excel様式に合わせたKY項目を編集します。作業内容は最大5件までです。
         </p>
         <div className="actions">
           <BackToKyDetailLink
@@ -226,14 +248,20 @@ export function KyEditPage() {
 
       <form className="data-form" onSubmit={handleSubmit}>
         <label>
-          <span>作業日</span>
+          <span>実施日</span>
+          <input disabled required type="date" value={formState.workDate} />
+        </label>
+
+        <label>
+          <span>天候</span>
           <input
-            disabled
-            required
-            type="date"
-            value={formState.workDate}
+            onChange={(event) => updateFormField('weather', event.target.value)}
+            type="text"
+            value={formState.weather}
           />
         </label>
+
+        <RiskCriteriaPanel />
 
         <div className="work-item-list">
           {formState.workItems.map((workItem, index) => (
@@ -258,7 +286,7 @@ export function KyEditPage() {
         </button>
 
         {formState.workItems.length >= maxWorkItems ? (
-          <p>作業項目は最大5件までです。</p>
+          <p>作業内容は最大5件までです。</p>
         ) : null}
 
         {submitError ? (
@@ -285,32 +313,19 @@ function WorkItemFields({
   canRemove: boolean
   index: number
   onRemove: () => void
-  onUpdate: (
-    field: keyof Omit<KyRecordWorkItem, 'id' | 'order'>,
-    value: string,
-  ) => void
+  onUpdate: (field: WorkItemEditableField, value: string | number) => void
   workItem: KyRecordWorkItem
 }) {
   return (
     <fieldset className="work-item-fields">
       <div className="work-item-header">
-        <legend>作業項目 {index + 1}</legend>
+        <legend>No. {index + 1}</legend>
         {canRemove ? (
           <button className="button-link" onClick={onRemove} type="button">
-            この作業項目を削除
+            この作業内容を削除
           </button>
         ) : null}
       </div>
-
-      <label>
-        <span>作業名</span>
-        <input
-          onChange={(event) => onUpdate('workName', event.target.value)}
-          required
-          type="text"
-          value={workItem.workName}
-        />
-      </label>
 
       <label>
         <span>作業内容</span>
@@ -323,17 +338,61 @@ function WorkItemFields({
       </label>
 
       <label>
-        <span>危険要因</span>
+        <span>危険ポイント</span>
         <textarea
-          onChange={(event) => onUpdate('riskFactors', event.target.value)}
+          onChange={(event) => onUpdate('riskPoint', event.target.value)}
           required
           rows={4}
-          value={workItem.riskFactors}
+          value={workItem.riskPoint}
         />
       </label>
 
+      <div className="rating-grid">
+        <label>
+          <span>可能性</span>
+          <select
+            onChange={(event) =>
+              onUpdate('possibility', Number(event.target.value))
+            }
+            value={workItem.possibility}
+          >
+            {possibilityOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.value}: {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          <span>重大性</span>
+          <select
+            onChange={(event) => onUpdate('severity', Number(event.target.value))}
+            value={workItem.severity}
+          >
+            {severityOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.value}: {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="calculated-field">
+          <span>評価</span>
+          <strong>{workItem.riskScore}</strong>
+        </div>
+
+        <div className="calculated-field">
+          <span>危険度</span>
+          <strong>
+            {workItem.riskLevel}: {riskLevelDescriptions[workItem.riskLevel]}
+          </strong>
+        </div>
+      </div>
+
       <label>
-        <span>対策</span>
+        <span>危険ポイントの対策</span>
         <textarea
           onChange={(event) => onUpdate('countermeasures', event.target.value)}
           required
@@ -341,17 +400,36 @@ function WorkItemFields({
           value={workItem.countermeasures}
         />
       </label>
-
-      <label>
-        <span>本日の重点確認事項</span>
-        <textarea
-          onChange={(event) => onUpdate('keyPoints', event.target.value)}
-          required
-          rows={4}
-          value={workItem.keyPoints}
-        />
-      </label>
     </fieldset>
+  )
+}
+
+function RiskCriteriaPanel() {
+  return (
+    <section className="status-panel">
+      <h2>評価基準表</h2>
+      <div className="criteria-grid">
+        <div>
+          <h3>可能性</h3>
+          <p>1: {getPossibilityLabel(1)}</p>
+          <p>2: {getPossibilityLabel(2)}</p>
+          <p>3: {getPossibilityLabel(3)}</p>
+        </div>
+        <div>
+          <h3>重大性</h3>
+          <p>1: {getSeverityLabel(1)}</p>
+          <p>2: {getSeverityLabel(2)}</p>
+          <p>3: {getSeverityLabel(3)}</p>
+        </div>
+        <div>
+          <h3>危険度</h3>
+          <p>I: {riskLevelDescriptions.I}</p>
+          <p>II: {riskLevelDescriptions.II}</p>
+          <p>III: {riskLevelDescriptions.III}</p>
+          <p>IV: {riskLevelDescriptions.IV}</p>
+        </div>
+      </div>
+    </section>
   )
 }
 

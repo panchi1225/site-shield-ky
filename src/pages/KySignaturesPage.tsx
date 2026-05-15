@@ -6,7 +6,7 @@ import { useKyRecord } from '../hooks/useKyRecord'
 import { useWorkerChecks } from '../hooks/useWorkerChecks'
 import { db } from '../lib/firebase'
 import type { KyRecordStatus } from '../types/kyRecord'
-import type { HealthChecks, WorkerCheck } from '../types/workerCheck'
+import type { MedicationStatus, WorkerCheck } from '../types/workerCheck'
 import { getPrimaryWorkName } from '../utils/kyRecord'
 
 const kyStatusLabels: Record<KyRecordStatus, string> = {
@@ -14,6 +14,12 @@ const kyStatusLabels: Record<KyRecordStatus, string> = {
   signature_open: '署名受付中',
   registered: '登録済み',
   stamped: '押印済み',
+}
+
+const medicationStatusLabels: Record<MedicationStatus, string> = {
+  taken: '○ 飲んできた',
+  forgot: '× 飲み忘れ',
+  none: '- 対象なし',
 }
 
 export function KySignaturesPage() {
@@ -97,9 +103,7 @@ export function KySignaturesPage() {
       <section className="page">
         <div className="status-panel warning-panel">
           <h1>署名確認画面はまだ利用できません</h1>
-          <p>
-            今回は管理者だけが署名確認画面を閲覧できます。元請責任者と下請け責任者の表示制御は後で実装します。
-          </p>
+          <p>今回は管理者だけが署名確認画面を閲覧できます。</p>
           <BackToKyLink
             companyId={companyId}
             kyRecordId={kyRecordId}
@@ -227,8 +231,8 @@ export function KySignaturesPage() {
       <section className="status-panel role-panel">
         <h2>対象KY</h2>
         <ul className="status-list">
-          <DetailRow label="作業日" value={kyRecord.workDate} />
-          <DetailRow label="代表作業名" value={getPrimaryWorkName(kyRecord)} />
+          <DetailRow label="実施日" value={kyRecord.workDate} />
+          <DetailRow label="代表作業内容" value={getPrimaryWorkName(kyRecord)} />
           <DetailRow label="status" value={kyStatusLabels[kyRecord.status]} />
           <DetailRow
             label="署名セッションID"
@@ -282,7 +286,7 @@ function SignatureReviewCard({
   index: number
   workerCheck: WorkerCheck
 }) {
-  const healthOk = allHealthOk(workerCheck.healthChecks)
+  const healthOk = isHealthOk(workerCheck)
   const signatureSvg = getDisplayableSignatureSvg(workerCheck)
 
   return (
@@ -295,6 +299,42 @@ function SignatureReviewCard({
       </div>
       <ul className="status-list">
         <DetailRow label="健康状態" value={healthOk ? '良好' : '要確認'} />
+        <DetailRow
+          label="体温"
+          value={
+            workerCheck.temperatureC === null
+              ? '未入力'
+              : `${workerCheck.temperatureC.toFixed(1)} ℃`
+          }
+        />
+        <DetailRow
+          label="alc.チェック"
+          value={
+            workerCheck.alcoholMg === null
+              ? '未入力'
+              : `${workerCheck.alcoholMg.toFixed(2)} mg`
+          }
+        />
+        <DetailRow
+          label="体調"
+          value={workerCheck.healthChecks.conditionOk ? '○' : '×'}
+        />
+        <DetailRow
+          label="睡眠"
+          value={workerCheck.healthChecks.sleepOk ? '○' : '×'}
+        />
+        <DetailRow
+          label="朝食"
+          value={workerCheck.healthChecks.breakfastOk ? '○' : '×'}
+        />
+        <DetailRow
+          label="服薬"
+          value={medicationStatusLabels[workerCheck.medicationStatus]}
+        />
+        <DetailRow
+          label="服薬内容"
+          value={workerCheck.medicationNote || 'なし'}
+        />
         <DetailRow label="体調メモ" value={workerCheck.healthNote || 'なし'} />
         <DetailRow
           label="登録日時"
@@ -325,12 +365,13 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function allHealthOk(healthChecks: HealthChecks) {
+function isHealthOk(workerCheck: WorkerCheck) {
   return (
-    healthChecks.conditionOk &&
-    healthChecks.sleepOk &&
-    healthChecks.alcoholOk &&
-    healthChecks.medicationOk
+    workerCheck.healthChecks.conditionOk &&
+    workerCheck.healthChecks.sleepOk &&
+    workerCheck.healthChecks.breakfastOk &&
+    (workerCheck.alcoholMg === null || workerCheck.alcoholMg <= 0) &&
+    workerCheck.medicationStatus === 'none'
   )
 }
 

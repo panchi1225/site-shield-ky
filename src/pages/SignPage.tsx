@@ -13,7 +13,17 @@ import {
 import { auth, db } from '../lib/firebase'
 import type { KyRecordWorkItem } from '../types/kyRecord'
 import type { SignatureSession } from '../types/signatureSession'
-import type { HealthChecks, SubmittedByAuthType } from '../types/workerCheck'
+import type {
+  HealthChecks,
+  MedicationStatus,
+  SubmittedByAuthType,
+} from '../types/workerCheck'
+import {
+  getPossibilityLabel,
+  getSeverityLabel,
+  normalizeWorkItems,
+  riskLevelDescriptions,
+} from '../utils/kyRecord'
 import {
   createSignatureSvg,
   hasSignature,
@@ -26,8 +36,7 @@ const signatureHeight = 220
 const initialHealthChecks: HealthChecks = {
   conditionOk: true,
   sleepOk: true,
-  alcoholOk: true,
-  medicationOk: true,
+  breakfastOk: true,
 }
 
 type SignPageState = {
@@ -44,36 +53,12 @@ function toDate(value: unknown) {
   return value instanceof Timestamp ? value.toDate() : null
 }
 
-function toWorkItem(value: unknown, index: number): KyRecordWorkItem | null {
-  if (!value || typeof value !== 'object') {
-    return null
-  }
-
-  const data = value as Record<string, unknown>
-  const order = typeof data.order === 'number' ? data.order : index + 1
-
-  return {
-    id: typeof data.id === 'string' ? data.id : `item-${order}`,
-    order,
-    workName: typeof data.workName === 'string' ? data.workName : '',
-    workDescription:
-      typeof data.workDescription === 'string' ? data.workDescription : '',
-    riskFactors: typeof data.riskFactors === 'string' ? data.riskFactors : '',
-    countermeasures:
-      typeof data.countermeasures === 'string' ? data.countermeasures : '',
-    keyPoints: typeof data.keyPoints === 'string' ? data.keyPoints : '',
-  }
-}
-
 function toSignatureSession(
   id: string,
   data: Record<string, unknown>,
 ): SignatureSession {
   const workItems = Array.isArray(data.workItems)
-    ? data.workItems
-        .map((item, index) => toWorkItem(item, index))
-        .filter((item): item is KyRecordWorkItem => item !== null)
-        .sort((a, b) => a.order - b.order)
+    ? normalizeWorkItems(data.workItems as KyRecordWorkItem[])
     : []
 
   return {
@@ -120,6 +105,17 @@ function getSafeReturnTo(value: string | null) {
   return value
 }
 
+function parseOptionalNumber(value: string) {
+  const trimmed = value.trim()
+
+  if (!trimmed) {
+    return null
+  }
+
+  const numericValue = Number(trimmed)
+  return Number.isFinite(numericValue) ? numericValue : null
+}
+
 export function SignPage() {
   const { token } = useParams()
   const [searchParams] = useSearchParams()
@@ -133,8 +129,13 @@ export function SignPage() {
     isMissing: false,
     session: null,
   })
+  const [temperatureC, setTemperatureC] = useState('')
+  const [alcoholMg, setAlcoholMg] = useState('0')
   const [healthChecks, setHealthChecks] =
     useState<HealthChecks>(initialHealthChecks)
+  const [medicationStatus, setMedicationStatus] =
+    useState<MedicationStatus>('none')
+  const [medicationNote, setMedicationNote] = useState('')
   const [healthNote, setHealthNote] = useState('')
   const [submitError, setSubmitError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -190,7 +191,7 @@ export function SignPage() {
           isMissing: false,
           session,
         })
-      } catch (error) {
+      } catch {
         if (!isActive) {
           return
         }
@@ -303,7 +304,11 @@ export function SignPage() {
   }
 
   function resetForm() {
+    setTemperatureC('')
+    setAlcoholMg('0')
     setHealthChecks(initialHealthChecks)
+    setMedicationStatus('none')
+    setMedicationNote('')
     setHealthNote('')
     clearSignature()
   }
@@ -330,7 +335,25 @@ export function SignPage() {
     }
 
     if (!hasSignature(strokesRef.current)) {
-      setSubmitError('署名を入力してください。')
+      setSubmitError('手書き署名を入力してください。')
+      return
+    }
+
+    if (medicationStatus === 'taken' && medicationNote.trim().length === 0) {
+      setSubmitError('服薬している場合は、服薬内容を入力してください。')
+      return
+    }
+
+    const parsedTemperatureC = parseOptionalNumber(temperatureC)
+    const parsedAlcoholMg = parseOptionalNumber(alcoholMg)
+
+    if (temperatureC.trim() && parsedTemperatureC === null) {
+      setSubmitError('体温は数値で入力してください。')
+      return
+    }
+
+    if (alcoholMg.trim() && parsedAlcoholMg === null) {
+      setSubmitError('alc.チェックは数値で入力してください。')
       return
     }
 
@@ -348,7 +371,11 @@ export function SignPage() {
       )
 
       await addDoc(collection(db, 'signatureSessions', token, 'workerChecks'), {
+        temperatureC: parsedTemperatureC,
+        alcoholMg: parsedAlcoholMg,
         healthChecks,
+        medicationStatus,
+        medicationNote: medicationNote.trim(),
         healthNote: healthNote.trim(),
         signatureFormat: 'svg',
         signatureData,
@@ -423,7 +450,7 @@ export function SignPage() {
         <p className="eyebrow">作業員署名</p>
         <h1>{state.session.companyName || '会社名未設定'}</h1>
         <p className="lead">
-          健康状態を確認し、枠内に署名して登録してください。続けて別の作業員も同じ端末で登録できます。
+          健康状態を確認し、枠内に署名して登録してください。同じ端末で続けて別の作業員も登録できます。
         </p>
       </div>
 
@@ -431,7 +458,7 @@ export function SignPage() {
         <h2>署名対象KY</h2>
         <ul className="status-list">
           <li>
-            <span className="status-label">現場名</span>
+            <span className="status-label">工事名</span>
             <span className="status-value">{state.session.siteName}</span>
           </li>
           <li>
@@ -439,28 +466,49 @@ export function SignPage() {
             <span className="status-value">{state.session.companyName}</span>
           </li>
           <li>
-            <span className="status-label">作業日</span>
+            <span className="status-label">実施日</span>
             <span className="status-value">{state.session.workDate}</span>
           </li>
         </ul>
       </section>
 
       <section className="status-panel">
-        <h2>作業項目</h2>
+        <h2>作業内容</h2>
         <div className="work-item-detail-list">
           {state.session.workItems.map((workItem) => (
             <article className="work-item-detail" key={workItem.id}>
-              <h3>
-                作業項目 {workItem.order}: {workItem.workName || '作業名未設定'}
-              </h3>
+              <h3>No. {workItem.order}</h3>
               <div className="detail-grid">
                 <DetailBlock label="作業内容" value={workItem.workDescription} />
-                <DetailBlock label="危険要因" value={workItem.riskFactors} />
-                <DetailBlock label="対策" value={workItem.countermeasures} />
+                <DetailBlock label="危険ポイント" value={workItem.riskPoint} />
                 <DetailBlock
-                  label="本日の重点確認事項"
-                  value={workItem.keyPoints}
+                  label="危険ポイントの対策"
+                  value={workItem.countermeasures}
                 />
+              </div>
+              <div className="rating-summary-grid">
+                <div>
+                  <span className="status-label">可能性</span>
+                  <strong>
+                    {workItem.possibility}: {getPossibilityLabel(workItem.possibility)}
+                  </strong>
+                </div>
+                <div>
+                  <span className="status-label">重大性</span>
+                  <strong>
+                    {workItem.severity}: {getSeverityLabel(workItem.severity)}
+                  </strong>
+                </div>
+                <div>
+                  <span className="status-label">評価</span>
+                  <strong>{workItem.riskScore}</strong>
+                </div>
+                <div>
+                  <span className="status-label">危険度</span>
+                  <strong>
+                    {workItem.riskLevel}: {riskLevelDescriptions[workItem.riskLevel]}
+                  </strong>
+                </div>
               </div>
             </article>
           ))}
@@ -470,7 +518,7 @@ export function SignPage() {
       <section className="status-panel">
         <div className="section-heading">
           <div>
-            <h2>署名・健康チェック</h2>
+            <h2>健康チェック・署名</h2>
             <p className="local-submit-count">
               この端末での登録数：{localSubmitCount}件
             </p>
@@ -478,29 +526,79 @@ export function SignPage() {
         </div>
 
         <form className="data-form compact-form" onSubmit={handleSubmit}>
+          <div className="rating-grid">
+            <label>
+              <span>体温（℃）</span>
+              <input
+                inputMode="decimal"
+                onChange={(event) => setTemperatureC(event.target.value)}
+                placeholder="36.5"
+                type="number"
+                step="0.1"
+                value={temperatureC}
+              />
+            </label>
+
+            <label>
+              <span>alc.チェック（mg）</span>
+              <input
+                inputMode="decimal"
+                onChange={(event) => setAlcoholMg(event.target.value)}
+                placeholder="0.00"
+                type="number"
+                step="0.01"
+                value={alcoholMg}
+              />
+            </label>
+          </div>
+
           <fieldset className="check-fieldset">
             <legend>健康チェック</legend>
             <HealthCheckLabel
               checked={healthChecks.conditionOk}
-              label="体調は良好です"
+              label="体調は良好"
               onChange={(value) => updateHealthCheck('conditionOk', value)}
             />
             <HealthCheckLabel
               checked={healthChecks.sleepOk}
-              label="睡眠は十分です"
+              label="睡眠は十分"
               onChange={(value) => updateHealthCheck('sleepOk', value)}
             />
             <HealthCheckLabel
-              checked={healthChecks.alcoholOk}
-              label="飲酒の影響はありません"
-              onChange={(value) => updateHealthCheck('alcoholOk', value)}
-            />
-            <HealthCheckLabel
-              checked={healthChecks.medicationOk}
-              label="作業に支障のある薬の服用はありません"
-              onChange={(value) => updateHealthCheck('medicationOk', value)}
+              checked={healthChecks.breakfastOk}
+              label="朝食をとった"
+              onChange={(value) => updateHealthCheck('breakfastOk', value)}
             />
           </fieldset>
+
+          <label>
+            <span>服薬</span>
+            <select
+              onChange={(event) =>
+                setMedicationStatus(event.target.value as MedicationStatus)
+              }
+              value={medicationStatus}
+            >
+              <option value="none">- 対象なし</option>
+              <option value="taken">○ 飲んできた</option>
+              <option value="forgot">× 飲み忘れ</option>
+            </select>
+          </label>
+
+          {medicationStatus !== 'none' ? (
+            <label>
+              <span>
+                {medicationStatus === 'taken' ? '服薬内容' : '服薬内容・備考'}
+              </span>
+              <textarea
+                onChange={(event) => setMedicationNote(event.target.value)}
+                placeholder="例：血圧の薬、花粉症の薬、痛み止め"
+                required={medicationStatus === 'taken'}
+                rows={3}
+                value={medicationNote}
+              />
+            </label>
+          ) : null}
 
           <label>
             <span>体調メモ</span>
@@ -513,7 +611,7 @@ export function SignPage() {
 
           <div className="signature-pad-field">
             <div className="work-item-header">
-              <h3>署名</h3>
+              <h3>手書き署名</h3>
               <button className="button-link" onClick={clearSignature} type="button">
                 クリア
               </button>
@@ -548,7 +646,7 @@ export function SignPage() {
           ) : null}
 
           <button className="button-link primary" disabled={isSubmitting}>
-            {isSubmitting ? '登録中...' : '署名・健康チェックを登録'}
+            {isSubmitting ? '登録中...' : '健康チェックと署名を登録'}
           </button>
         </form>
       </section>

@@ -273,7 +273,8 @@ p {
 
 .auth-form input,
 .data-form input,
-.data-form textarea {
+.data-form textarea,
+.data-form select {
   width: 100%;
   min-height: 44px;
   border: 1px solid var(--line);
@@ -289,7 +290,8 @@ p {
 
 .auth-form input:focus,
 .data-form input:focus,
-.data-form textarea:focus {
+.data-form textarea:focus,
+.data-form select:focus {
   border-color: var(--primary);
   outline: 3px solid rgba(19, 111, 99, 0.16);
 }
@@ -399,6 +401,46 @@ p {
 .work-item-header legend {
   padding: 0;
   font-weight: 700;
+}
+
+.rating-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.calculated-field {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--surface-soft);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.calculated-field span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.criteria-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.criteria-grid > div,
+.rating-summary-grid > div {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--surface-soft);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.criteria-grid h3 {
+  margin: 0;
+  font-size: 1rem;
 }
 
 .form-error {
@@ -577,6 +619,12 @@ p {
   font-size: 1rem;
 }
 
+.rating-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .detail-block {
   display: grid;
   gap: 6px;
@@ -672,6 +720,12 @@ p {
 
   .section-heading {
     flex-direction: column;
+  }
+
+  .rating-grid,
+  .criteria-grid,
+  .rating-summary-grid {
+    grid-template-columns: 1fr;
   }
 
   .work-item-header {

@@ -8,10 +8,17 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { useAuth } from '../auth/AuthContext'
+import { useCompany } from '../hooks/useCompany'
 import { useKyRecord } from '../hooks/useKyRecord'
+import { useSite } from '../hooks/useSite'
 import { db } from '../lib/firebase'
 import type { KyRecordStatus, KyRecordWorkItem } from '../types/kyRecord'
-import { getPrimaryWorkName } from '../utils/kyRecord'
+import {
+  getPossibilityLabel,
+  getPrimaryWorkName,
+  getSeverityLabel,
+  riskLevelDescriptions,
+} from '../utils/kyRecord'
 import {
   createSignatureToken,
   createSignatureUrl,
@@ -38,6 +45,8 @@ export function KyDetailPage() {
     canViewKyRecord,
     reloadKey,
   )
+  const { site } = useSite(siteId, canViewKyRecord)
+  const { company } = useCompany(companyId, canViewKyRecord)
 
   async function handleOpenSignature() {
     if (!user || !kyRecordId || !kyRecord) {
@@ -162,9 +171,7 @@ export function KyDetailPage() {
       <section className="page">
         <div className="status-panel warning-panel">
           <h1>このKY詳細はまだ利用できません</h1>
-          <p>
-            今回は管理者だけがKY詳細を閲覧できます。元請責任者と下請け責任者の表示制御は後で実装します。
-          </p>
+          <p>今回は管理者だけがKY詳細を閲覧できます。</p>
           <BackToCompanyLink companyId={companyId} siteId={siteId} />
         </div>
       </section>
@@ -224,7 +231,7 @@ export function KyDetailPage() {
         <p className="eyebrow">KY詳細</p>
         <h1>{getPrimaryWorkName(kyRecord)}</h1>
         <p className="lead">
-          保存済みのKY下書き内容を表示します。編集・署名受付・PDF出力は後で実装します。
+          Excel様式に合わせたKY内容を表示します。PDF出力と元請確認欄は後で実装します。
         </p>
         <div className="actions">
           <BackToCompanyLink companyId={companyId} siteId={siteId} />
@@ -272,19 +279,22 @@ export function KyDetailPage() {
       ) : null}
 
       <section className="status-panel role-panel">
-        <h2>KY情報</h2>
+        <h2>基本情報</h2>
         <ul className="status-list">
-          <DetailRow label="作業日" value={kyRecord.workDate} />
-          <DetailRow label="代表作業名" value={getPrimaryWorkName(kyRecord)} />
+          <DetailRow label="工事名" value={site?.name ?? ''} />
+          <DetailRow label="会社名" value={company?.name ?? ''} />
+          <DetailRow label="実施日" value={kyRecord.workDate} />
+          <DetailRow label="天候" value={kyRecord.weather} />
           <DetailRow label="status" value={kyStatusLabels[kyRecord.status]} />
           <DetailRow label="作成者名" value={kyRecord.createdByName} />
           <DetailRow label="作成日時" value={formatDateTime(kyRecord.createdAt)} />
           <DetailRow label="更新日時" value={formatDateTime(kyRecord.updatedAt)} />
+          <DetailRow label="登録日時" value={formatDateTime(kyRecord.registeredAt)} />
         </ul>
       </section>
 
       <section className="status-panel">
-        <h2>KY内容</h2>
+        <h2>リスクアセスメントKY</h2>
         <div className="work-item-detail-list">
           {kyRecord.workItems.map((workItem) => (
             <WorkItemDetail key={workItem.id} workItem={workItem} />
@@ -292,9 +302,11 @@ export function KyDetailPage() {
         </div>
       </section>
 
+      <RiskCriteriaPanel />
+
       <section className="status-panel placeholder">
-        <h2>今後実装する機能</h2>
-        <p>編集・署名受付・PDF出力は後で実装します。</p>
+        <h2>後で実装する機能</h2>
+        <p>PDF出力、元請確認欄への電子印鑑、公開閲覧は後で実装します。</p>
       </section>
     </section>
   )
@@ -321,16 +333,61 @@ function DetailBlock({ label, value }: { label: string; value: string }) {
 function WorkItemDetail({ workItem }: { workItem: KyRecordWorkItem }) {
   return (
     <article className="work-item-detail">
-      <h3>
-        作業項目 {workItem.order}: {workItem.workName || '作業名未設定'}
-      </h3>
+      <h3>No. {workItem.order}</h3>
       <div className="detail-grid">
         <DetailBlock label="作業内容" value={workItem.workDescription} />
-        <DetailBlock label="危険要因" value={workItem.riskFactors} />
-        <DetailBlock label="対策" value={workItem.countermeasures} />
-        <DetailBlock label="本日の重点確認事項" value={workItem.keyPoints} />
+        <DetailBlock label="危険ポイント" value={workItem.riskPoint} />
+        <DetailBlock label="危険ポイントの対策" value={workItem.countermeasures} />
+      </div>
+      <div className="rating-summary-grid">
+        <DetailRow
+          label="可能性"
+          value={`${workItem.possibility}: ${getPossibilityLabel(
+            workItem.possibility,
+          )}`}
+        />
+        <DetailRow
+          label="重大性"
+          value={`${workItem.severity}: ${getSeverityLabel(workItem.severity)}`}
+        />
+        <DetailRow label="評価" value={String(workItem.riskScore)} />
+        <DetailRow
+          label="危険度"
+          value={`${workItem.riskLevel}: ${
+            riskLevelDescriptions[workItem.riskLevel]
+          }`}
+        />
       </div>
     </article>
+  )
+}
+
+function RiskCriteriaPanel() {
+  return (
+    <section className="status-panel">
+      <h2>評価基準表</h2>
+      <div className="criteria-grid">
+        <div>
+          <h3>可能性</h3>
+          <p>1: {getPossibilityLabel(1)}</p>
+          <p>2: {getPossibilityLabel(2)}</p>
+          <p>3: {getPossibilityLabel(3)}</p>
+        </div>
+        <div>
+          <h3>重大性</h3>
+          <p>1: {getSeverityLabel(1)}</p>
+          <p>2: {getSeverityLabel(2)}</p>
+          <p>3: {getSeverityLabel(3)}</p>
+        </div>
+        <div>
+          <h3>危険度</h3>
+          <p>I: {riskLevelDescriptions.I}</p>
+          <p>II: {riskLevelDescriptions.II}</p>
+          <p>III: {riskLevelDescriptions.III}</p>
+          <p>IV: {riskLevelDescriptions.IV}</p>
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -359,7 +416,7 @@ function SignatureSessionPanel({
       <h2>署名用URL</h2>
       {signatureSessionId ? (
         <div className="signature-url-box">
-          <p>このKYの署名用URLです。QRコード画像は後で実装します。</p>
+          <p>このKYの署名用URLです。登録後も追加署名を受け付けできます。</p>
           <a className="text-link signature-url" href={signatureUrl}>
             {signatureUrl}
           </a>

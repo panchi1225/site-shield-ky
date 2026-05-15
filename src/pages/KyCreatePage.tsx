@@ -8,12 +8,18 @@ import { db } from '../lib/firebase'
 import type { KyRecordDraftInput, KyRecordWorkItem } from '../types/kyRecord'
 import {
   createEmptyWorkItem,
+  getPossibilityLabel,
+  getSeverityLabel,
   maxWorkItems,
   normalizeWorkItems,
+  possibilityOptions,
+  riskLevelDescriptions,
+  severityOptions,
 } from '../utils/kyRecord'
 
 const initialFormState: KyRecordDraftInput = {
   workDate: new Date().toISOString().slice(0, 10),
+  weather: '',
   workItems: [createEmptyWorkItem(1)],
 }
 
@@ -31,19 +37,21 @@ export function KyCreatePage() {
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  function updateWorkDate(value: string) {
-    setFormState((current) => ({ ...current, workDate: value }))
+  function updateFormField(field: keyof Omit<KyRecordDraftInput, 'workItems'>, value: string) {
+    setFormState((current) => ({ ...current, [field]: value }))
   }
 
   function updateWorkItem(
     index: number,
-    field: keyof Omit<KyRecordWorkItem, 'id' | 'order'>,
-    value: string,
+    field: keyof Omit<KyRecordWorkItem, 'id' | 'order' | 'riskScore' | 'riskLevel'>,
+    value: string | number,
   ) {
     setFormState((current) => ({
       ...current,
-      workItems: current.workItems.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, [field]: value } : item,
+      workItems: normalizeWorkItems(
+        current.workItems.map((item, itemIndex) =>
+          itemIndex === index ? { ...item, [field]: value } : item,
+        ),
       ),
     }))
   }
@@ -114,6 +122,7 @@ export function KyCreatePage() {
         siteId,
         companyId,
         workDate: formState.workDate,
+        weather: formState.weather.trim(),
         status: 'draft',
         workItems,
         createdBy: user.uid,
@@ -206,7 +215,7 @@ export function KyCreatePage() {
         <p className="eyebrow">KY作成</p>
         <h1>{company.name || '会社名未設定'} のKY下書きを作成します。</h1>
         <p className="lead">
-          1日のKYを1枚作成し、その中に作業項目を最大5件まで登録します。署名、健康チェック、登録、PDF生成は後で実装します。
+          Excel様式に合わせて、1日のKYを1枚作成します。作業項目は最大5件まで登録できます。
         </p>
         <div className="actions">
           <BackToCompanyLink companyId={companyId} siteId={siteId} />
@@ -215,14 +224,25 @@ export function KyCreatePage() {
 
       <form className="data-form" onSubmit={handleSubmit}>
         <label>
-          <span>作業日</span>
+          <span>実施日</span>
           <input
-            onChange={(event) => updateWorkDate(event.target.value)}
+            onChange={(event) => updateFormField('workDate', event.target.value)}
             required
             type="date"
             value={formState.workDate}
           />
         </label>
+
+        <label>
+          <span>天候</span>
+          <input
+            onChange={(event) => updateFormField('weather', event.target.value)}
+            type="text"
+            value={formState.weather}
+          />
+        </label>
+
+        <RiskCriteriaPanel />
 
         <div className="work-item-list">
           {formState.workItems.map((workItem, index) => (
@@ -275,31 +295,21 @@ function WorkItemFields({
   index: number
   onRemove: () => void
   onUpdate: (
-    field: keyof Omit<KyRecordWorkItem, 'id' | 'order'>,
-    value: string,
+    field: keyof Omit<KyRecordWorkItem, 'id' | 'order' | 'riskScore' | 'riskLevel'>,
+    value: string | number,
   ) => void
   workItem: KyRecordWorkItem
 }) {
   return (
     <fieldset className="work-item-fields">
       <div className="work-item-header">
-        <legend>作業項目 {index + 1}</legend>
+        <legend>No. {index + 1}</legend>
         {canRemove ? (
           <button className="button-link" onClick={onRemove} type="button">
             この作業項目を削除
           </button>
         ) : null}
       </div>
-
-      <label>
-        <span>作業名</span>
-        <input
-          onChange={(event) => onUpdate('workName', event.target.value)}
-          required
-          type="text"
-          value={workItem.workName}
-        />
-      </label>
 
       <label>
         <span>作業内容</span>
@@ -312,17 +322,59 @@ function WorkItemFields({
       </label>
 
       <label>
-        <span>危険要因</span>
+        <span>危険ポイント</span>
         <textarea
-          onChange={(event) => onUpdate('riskFactors', event.target.value)}
+          onChange={(event) => onUpdate('riskPoint', event.target.value)}
           required
           rows={4}
-          value={workItem.riskFactors}
+          value={workItem.riskPoint}
         />
       </label>
 
+      <div className="rating-grid">
+        <label>
+          <span>可能性</span>
+          <select
+            onChange={(event) => onUpdate('possibility', Number(event.target.value))}
+            value={workItem.possibility}
+          >
+            {possibilityOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.value}: {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          <span>重大性</span>
+          <select
+            onChange={(event) => onUpdate('severity', Number(event.target.value))}
+            value={workItem.severity}
+          >
+            {severityOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.value}: {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="calculated-field">
+          <span>評価</span>
+          <strong>{workItem.riskScore}</strong>
+        </div>
+
+        <div className="calculated-field">
+          <span>危険度</span>
+          <strong>
+            {workItem.riskLevel}: {riskLevelDescriptions[workItem.riskLevel]}
+          </strong>
+        </div>
+      </div>
+
       <label>
-        <span>対策</span>
+        <span>危険ポイントの対策</span>
         <textarea
           onChange={(event) => onUpdate('countermeasures', event.target.value)}
           required
@@ -330,17 +382,36 @@ function WorkItemFields({
           value={workItem.countermeasures}
         />
       </label>
-
-      <label>
-        <span>本日の重点確認事項</span>
-        <textarea
-          onChange={(event) => onUpdate('keyPoints', event.target.value)}
-          required
-          rows={4}
-          value={workItem.keyPoints}
-        />
-      </label>
     </fieldset>
+  )
+}
+
+function RiskCriteriaPanel() {
+  return (
+    <section className="status-panel">
+      <h2>評価基準表</h2>
+      <div className="criteria-grid">
+        <div>
+          <h3>可能性</h3>
+          <p>1: {getPossibilityLabel(1)}</p>
+          <p>2: {getPossibilityLabel(2)}</p>
+          <p>3: {getPossibilityLabel(3)}</p>
+        </div>
+        <div>
+          <h3>重大性</h3>
+          <p>1: {getSeverityLabel(1)}</p>
+          <p>2: {getSeverityLabel(2)}</p>
+          <p>3: {getSeverityLabel(3)}</p>
+        </div>
+        <div>
+          <h3>危険度</h3>
+          <p>I: {riskLevelDescriptions.I}</p>
+          <p>II: {riskLevelDescriptions.II}</p>
+          <p>III: {riskLevelDescriptions.III}</p>
+          <p>IV: {riskLevelDescriptions.IV}</p>
+        </div>
+      </div>
+    </section>
   )
 }
 

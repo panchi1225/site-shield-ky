@@ -7,15 +7,18 @@ export type KyRecordStatus =
 export type KyRecordWorkItem = {
   id: string
   order: number
-  workName: string
   workDescription: string
-  riskFactors: string
+  riskPoint: string
+  possibility: 1 | 2 | 3
+  severity: 1 | 2 | 3
+  riskScore: number
+  riskLevel: 'I' | 'II' | 'III' | 'IV'
   countermeasures: string
-  keyPoints: string
 }
 
 export type KyRecordDraftInput = {
   workDate: string
+  weather: string
   workItems: KyRecordWorkItem[]
 }
 
@@ -24,6 +27,7 @@ export type KyRecord = {
   siteId: string
   companyId: string
   workDate: string
+  weather: string
   status: KyRecordStatus
   workItems: KyRecordWorkItem[]
   createdBy: string

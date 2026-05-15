@@ -3,6 +3,7 @@ import { collection, getDocs, Timestamp } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import type {
   HealthChecks,
+  MedicationStatus,
   SubmittedByAuthType,
   WorkerCheck,
 } from '../types/workerCheck'
@@ -17,13 +18,16 @@ function toDate(value: unknown) {
   return value instanceof Timestamp ? value.toDate() : null
 }
 
+function toNullableNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
 function toHealthChecks(value: unknown): HealthChecks {
   if (!value || typeof value !== 'object') {
     return {
       conditionOk: false,
       sleepOk: false,
-      alcoholOk: false,
-      medicationOk: false,
+      breakfastOk: true,
     }
   }
 
@@ -32,9 +36,15 @@ function toHealthChecks(value: unknown): HealthChecks {
   return {
     conditionOk: data.conditionOk === true,
     sleepOk: data.sleepOk === true,
-    alcoholOk: data.alcoholOk === true,
-    medicationOk: data.medicationOk === true,
+    breakfastOk:
+      typeof data.breakfastOk === 'boolean' ? data.breakfastOk : true,
   }
+}
+
+function toMedicationStatus(value: unknown): MedicationStatus {
+  return value === 'taken' || value === 'forgot' || value === 'none'
+    ? value
+    : 'none'
 }
 
 function toSubmittedByAuthType(value: unknown): SubmittedByAuthType {
@@ -46,7 +56,12 @@ function toSubmittedByAuthType(value: unknown): SubmittedByAuthType {
 function toWorkerCheck(id: string, data: Record<string, unknown>): WorkerCheck {
   return {
     id,
+    temperatureC: toNullableNumber(data.temperatureC),
+    alcoholMg: toNullableNumber(data.alcoholMg),
     healthChecks: toHealthChecks(data.healthChecks),
+    medicationStatus: toMedicationStatus(data.medicationStatus),
+    medicationNote:
+      typeof data.medicationNote === 'string' ? data.medicationNote : '',
     healthNote: typeof data.healthNote === 'string' ? data.healthNote : '',
     signatureFormat: 'svg',
     signatureData:
