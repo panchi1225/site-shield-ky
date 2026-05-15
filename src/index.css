@@ -355,6 +355,11 @@ p {
   touch-action: none;
 }
 
+.local-submit-count {
+  margin-top: 4px;
+  font-weight: 700;
+}
+
 .success-message {
   border: 1px solid #a7f3d0;
   border-radius: 6px;
@@ -429,20 +434,6 @@ p {
 .ky-record-list {
   display: grid;
   gap: 10px;
-}
-
-.worker-check-list {
-  display: grid;
-  gap: 10px;
-}
-
-.worker-check-item {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 12px;
-  border: 1px solid var(--surface-soft);
-  border-radius: 8px;
-  padding: 12px;
 }
 
 .site-item {
@@ -628,10 +619,6 @@ p {
   }
 
   .ky-record-meta {
-    grid-template-columns: 1fr;
-  }
-
-  .worker-check-item {
     grid-template-columns: 1fr;
   }
 

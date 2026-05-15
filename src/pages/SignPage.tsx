@@ -7,18 +7,13 @@ import {
   collection,
   doc,
   getDoc,
-  getDocs,
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import type { KyRecordWorkItem } from '../types/kyRecord'
 import type { SignatureSession } from '../types/signatureSession'
-import type {
-  HealthChecks,
-  SubmittedByAuthType,
-  WorkerCheck,
-} from '../types/workerCheck'
+import type { HealthChecks, SubmittedByAuthType } from '../types/workerCheck'
 import {
   createSignatureSvg,
   hasSignature,
@@ -97,49 +92,6 @@ function toSignatureSession(
   }
 }
 
-function toHealthChecks(value: unknown): HealthChecks {
-  if (!value || typeof value !== 'object') {
-    return {
-      conditionOk: false,
-      sleepOk: false,
-      alcoholOk: false,
-      medicationOk: false,
-    }
-  }
-
-  const data = value as Record<string, unknown>
-
-  return {
-    conditionOk: data.conditionOk === true,
-    sleepOk: data.sleepOk === true,
-    alcoholOk: data.alcoholOk === true,
-    medicationOk: data.medicationOk === true,
-  }
-}
-
-function toSubmittedByAuthType(value: unknown): SubmittedByAuthType {
-  return value === 'anonymous' || value === 'password' || value === 'unknown'
-    ? value
-    : 'unknown'
-}
-
-function toWorkerCheck(id: string, data: Record<string, unknown>): WorkerCheck {
-  return {
-    id,
-    workerName: typeof data.workerName === 'string' ? data.workerName : '',
-    healthChecks: toHealthChecks(data.healthChecks),
-    healthNote: typeof data.healthNote === 'string' ? data.healthNote : '',
-    signatureFormat: 'svg',
-    signatureData:
-      typeof data.signatureData === 'string' ? data.signatureData : '',
-    submittedByUid:
-      typeof data.submittedByUid === 'string' ? data.submittedByUid : '',
-    submittedByAuthType: toSubmittedByAuthType(data.submittedByAuthType),
-    createdAt: toDate(data.createdAt),
-    updatedAt: toDate(data.updatedAt),
-  }
-}
-
 function getAuthType(): SubmittedByAuthType {
   const currentUser = auth.currentUser
 
@@ -158,15 +110,6 @@ function getAuthType(): SubmittedByAuthType {
     : 'unknown'
 }
 
-function allHealthOk(healthChecks: HealthChecks) {
-  return (
-    healthChecks.conditionOk &&
-    healthChecks.sleepOk &&
-    healthChecks.alcoholOk &&
-    healthChecks.medicationOk
-  )
-}
-
 export function SignPage() {
   const { token } = useParams()
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -179,17 +122,14 @@ export function SignPage() {
     isMissing: false,
     session: null,
   })
-  const [workerName, setWorkerName] = useState('')
   const [healthChecks, setHealthChecks] =
     useState<HealthChecks>(initialHealthChecks)
   const [healthNote, setHealthNote] = useState('')
   const [submitError, setSubmitError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [localSubmitCount, setLocalSubmitCount] = useState(0)
   const [, setSignatureRevision] = useState(0)
-  const [workerChecks, setWorkerChecks] = useState<WorkerCheck[]>([])
-  const [workerChecksError, setWorkerChecksError] = useState('')
-  const [isWorkerChecksLoading, setIsWorkerChecksLoading] = useState(false)
 
   useEffect(() => {
     let isActive = true
@@ -279,44 +219,6 @@ export function SignPage() {
     }
   }, [token])
 
-  async function loadWorkerChecks(signatureToken: string) {
-    setWorkerChecksError('')
-    setIsWorkerChecksLoading(true)
-
-    try {
-      const snapshot = await getDocs(
-        collection(db, 'signatureSessions', signatureToken, 'workerChecks'),
-      )
-      const loadedWorkerChecks = snapshot.docs
-        .map((workerCheckDoc) =>
-          toWorkerCheck(workerCheckDoc.id, workerCheckDoc.data()),
-        )
-        .sort(
-          (a, b) =>
-            (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
-        )
-
-      setWorkerChecks(loadedWorkerChecks)
-    } catch (error) {
-      setWorkerChecksError(
-        error instanceof Error
-          ? error.message
-          : '登録済み作業員一覧を読み込めませんでした。',
-      )
-    } finally {
-      setIsWorkerChecksLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (!token || !state.session) {
-      setWorkerChecks([])
-      return
-    }
-
-    void loadWorkerChecks(token)
-  }, [state.session, token])
-
   function getCanvasPoint(event: PointerEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current
 
@@ -399,7 +301,6 @@ export function SignPage() {
   }
 
   function resetForm() {
-    setWorkerName('')
     setHealthChecks(initialHealthChecks)
     setHealthNote('')
     clearSignature()
@@ -426,11 +327,6 @@ export function SignPage() {
       return
     }
 
-    if (!workerName.trim()) {
-      setSubmitError('作業員名を入力してください。')
-      return
-    }
-
     if (!hasSignature(strokesRef.current)) {
       setSubmitError('署名を入力してください。')
       return
@@ -450,7 +346,6 @@ export function SignPage() {
       )
 
       await addDoc(collection(db, 'signatureSessions', token, 'workerChecks'), {
-        workerName: workerName.trim(),
         healthChecks,
         healthNote: healthNote.trim(),
         signatureFormat: 'svg',
@@ -462,8 +357,8 @@ export function SignPage() {
       })
 
       setSuccessMessage('登録しました。次の作業員を入力してください。')
+      setLocalSubmitCount((current) => current + 1)
       resetForm()
-      await loadWorkerChecks(token)
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -477,7 +372,7 @@ export function SignPage() {
 
   if (state.isLoading) {
     return (
-      <section className="page">
+      <section className="page sign-page">
         <div className="status-panel">
           <h1>署名セッションを読み込んでいます</h1>
           <p>署名対象のKYを確認しています。</p>
@@ -488,7 +383,7 @@ export function SignPage() {
 
   if (state.isMissing) {
     return (
-      <section className="page">
+      <section className="page sign-page">
         <div className="status-panel warning-panel">
           <h1>署名セッションが見つかりません</h1>
           <p>URLが正しいか確認してください。</p>
@@ -499,7 +394,7 @@ export function SignPage() {
 
   if (state.isClosed) {
     return (
-      <section className="page">
+      <section className="page sign-page">
         <div className="status-panel warning-panel">
           <h1>署名受付は終了しています</h1>
           <p>この署名用URLは現在利用できません。</p>
@@ -510,7 +405,7 @@ export function SignPage() {
 
   if (state.errorMessage) {
     return (
-      <section className="page">
+      <section className="page sign-page">
         <div className="status-panel warning-panel">
           <h1>署名セッションを読み込めませんでした</h1>
           <p>{state.errorMessage}</p>
@@ -529,7 +424,7 @@ export function SignPage() {
         <p className="eyebrow">作業員署名</p>
         <h1>{state.session.companyName || '会社名未設定'}</h1>
         <p className="lead">
-          この画面は、複数の作業員が連続して署名・健康チェックを行うための入口です。
+          健康状態を確認し、枠内に署名して登録してください。続けて別の作業員も同じ端末で登録できます。
         </p>
       </div>
 
@@ -574,18 +469,16 @@ export function SignPage() {
       </section>
 
       <section className="status-panel">
-        <h2>署名・健康チェック</h2>
-        <form className="data-form compact-form" onSubmit={handleSubmit}>
-          <label>
-            <span>作業員名</span>
-            <input
-              onChange={(event) => setWorkerName(event.target.value)}
-              required
-              type="text"
-              value={workerName}
-            />
-          </label>
+        <div className="section-heading">
+          <div>
+            <h2>署名・健康チェック</h2>
+            <p className="local-submit-count">
+              この端末での登録数：{localSubmitCount}件
+            </p>
+          </div>
+        </div>
 
+        <form className="data-form compact-form" onSubmit={handleSubmit}>
           <fieldset className="check-fieldset">
             <legend>健康チェック</legend>
             <HealthCheckLabel
@@ -660,29 +553,6 @@ export function SignPage() {
           </button>
         </form>
       </section>
-
-      <section className="status-panel">
-        <h2>登録済み作業員</h2>
-        {isWorkerChecksLoading ? (
-          <p>登録済み作業員を読み込んでいます。</p>
-        ) : workerChecksError ? (
-          <p className="form-error">{workerChecksError}</p>
-        ) : workerChecks.length === 0 ? (
-          <p>まだ登録済み作業員はいません。</p>
-        ) : (
-          <div className="worker-check-list">
-            {workerChecks.map((workerCheck) => (
-              <div className="worker-check-item" key={workerCheck.id}>
-                <span>{workerCheck.workerName || '作業員名未設定'}</span>
-                <span>
-                  {allHealthOk(workerCheck.healthChecks) ? '良好' : '要確認'}
-                </span>
-                <span>{formatDateTime(workerCheck.createdAt)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
     </section>
   )
 }
@@ -715,15 +585,4 @@ function DetailBlock({ label, value }: { label: string; value: string }) {
       <p>{value || '未設定'}</p>
     </div>
   )
-}
-
-function formatDateTime(value: Date | null) {
-  if (!value) {
-    return '未設定'
-  }
-
-  return new Intl.DateTimeFormat('ja-JP', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(value)
 }
