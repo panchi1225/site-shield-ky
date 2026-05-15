@@ -360,6 +360,12 @@ p {
   font-weight: 700;
 }
 
+.sign-return-action {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 18px;
+}
+
 .success-message {
   border: 1px solid #a7f3d0;
   border-radius: 6px;

@@ -1,6 +1,6 @@
 import type { FormEvent, PointerEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { signInAnonymously } from 'firebase/auth'
 import {
   addDoc,
@@ -112,8 +112,18 @@ function getAuthType(): SubmittedByAuthType {
     : 'unknown'
 }
 
+function getSafeReturnTo(value: string | null) {
+  if (!value || !value.startsWith('/app/')) {
+    return null
+  }
+
+  return value
+}
+
 export function SignPage() {
   const { token } = useParams()
+  const [searchParams] = useSearchParams()
+  const safeReturnTo = getSafeReturnTo(searchParams.get('returnTo'))
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const strokesRef = useRef<SignatureStroke[]>([])
   const isDrawingRef = useRef(false)
@@ -401,6 +411,14 @@ export function SignPage() {
 
   return (
     <section className="page sign-page">
+      {safeReturnTo ? (
+        <div className="sign-return-action">
+          <Link className="button-link" to={safeReturnTo}>
+            KY詳細へ戻る
+          </Link>
+        </div>
+      ) : null}
+
       <div className="page-header">
         <p className="eyebrow">作業員署名</p>
         <h1>{state.session.companyName || '会社名未設定'}</h1>

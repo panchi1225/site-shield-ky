@@ -266,6 +266,7 @@ export function KyDetailPage() {
           canCreate={kyRecord.status === 'signature_open'}
           isCreating={isCreatingSignatureSession}
           onCreate={handleCreateSignatureSession}
+          returnTo={`/app/sites/${siteId}/companies/${companyId}/ky/${kyRecord.id}`}
           signatureSessionId={kyRecord.signatureSessionId}
         />
       ) : null}
@@ -337,15 +338,20 @@ function SignatureSessionPanel({
   canCreate,
   isCreating,
   onCreate,
+  returnTo,
   signatureSessionId,
 }: {
   canCreate: boolean
   isCreating: boolean
   onCreate: () => void
+  returnTo: string
   signatureSessionId: string | null
 }) {
   const signatureUrl = signatureSessionId
     ? createSignatureUrl(signatureSessionId)
+    : ''
+  const inAppSignaturePath = signatureSessionId
+    ? `/sign/${signatureSessionId}?returnTo=${encodeURIComponent(returnTo)}`
     : ''
 
   return (
@@ -357,7 +363,7 @@ function SignatureSessionPanel({
           <a className="text-link signature-url" href={signatureUrl}>
             {signatureUrl}
           </a>
-          <Link className="button-link primary" to={`/sign/${signatureSessionId}`}>
+          <Link className="button-link primary" to={inAppSignaturePath}>
             この端末で署名画面を開く
           </Link>
         </div>
