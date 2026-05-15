@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { doc, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { doc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { useAuth } from '../auth/AuthContext'
 import { useKyRecord } from '../hooks/useKyRecord'
 import { useWorkerChecks } from '../hooks/useWorkerChecks'
@@ -61,7 +61,7 @@ export function KySignaturesPage() {
     }
 
     const shouldRegister = window.confirm(
-      'このKYを登録済みにします。登録後は署名受付を終了します。よろしいですか？',
+      'このKYを登録済みにします。登録後も署名受付は継続します。よろしいですか？',
     )
 
     if (!shouldRegister) {
@@ -73,9 +73,7 @@ export function KySignaturesPage() {
     setIsRegistering(true)
 
     try {
-      const batch = writeBatch(db)
-
-      batch.update(doc(db, 'kyRecords', kyRecord.id), {
+      await updateDoc(doc(db, 'kyRecords', kyRecord.id), {
         status: 'registered',
         registeredBy: user.uid,
         registeredAt: serverTimestamp(),
@@ -83,14 +81,7 @@ export function KySignaturesPage() {
         updatedAt: serverTimestamp(),
       })
 
-      batch.update(doc(db, 'signatureSessions', kyRecord.signatureSessionId), {
-        active: false,
-        closedBy: user.uid,
-        closedAt: serverTimestamp(),
-      })
-
-      await batch.commit()
-      setRegisterSuccessMessage('KYを登録しました。署名受付は終了しました。')
+      setRegisterSuccessMessage('KYを登録しました。署名受付は継続しています。')
       setReloadKey((current) => current + 1)
     } catch (error) {
       setRegisterError(
@@ -200,7 +191,7 @@ export function KySignaturesPage() {
           <div>
             <h2>KY登録</h2>
             <p>
-              署名確認後、問題がなければKYを登録済みにして署名受付を終了します。
+              署名確認後、問題がなければKYを登録済みにします。登録後も追加署名は受け付けます。
             </p>
           </div>
           {kyRecord.status === 'signature_open' ? (

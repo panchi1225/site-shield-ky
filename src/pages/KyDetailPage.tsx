@@ -261,8 +261,9 @@ export function KyDetailPage() {
         </p>
       ) : null}
 
-      {kyRecord.status === 'signature_open' ? (
+      {kyRecord.status !== 'draft' ? (
         <SignatureSessionPanel
+          canCreate={kyRecord.status === 'signature_open'}
           isCreating={isCreatingSignatureSession}
           onCreate={handleCreateSignatureSession}
           signatureSessionId={kyRecord.signatureSessionId}
@@ -333,10 +334,12 @@ function WorkItemDetail({ workItem }: { workItem: KyRecordWorkItem }) {
 }
 
 function SignatureSessionPanel({
+  canCreate,
   isCreating,
   onCreate,
   signatureSessionId,
 }: {
+  canCreate: boolean
   isCreating: boolean
   onCreate: () => void
   signatureSessionId: string | null
@@ -360,15 +363,21 @@ function SignatureSessionPanel({
         </div>
       ) : (
         <>
-          <p>署名用URLはまだ作成されていません。</p>
-          <button
-            className="button-link primary"
-            disabled={isCreating}
-            onClick={onCreate}
-            type="button"
-          >
-            {isCreating ? '作成中...' : '署名用URLを作成'}
-          </button>
+          <p>
+            {canCreate
+              ? '署名用URLはまだ作成されていません。'
+              : '署名用URLがありません。登録済み以降のKYでは新規作成しません。'}
+          </p>
+          {canCreate ? (
+            <button
+              className="button-link primary"
+              disabled={isCreating}
+              onClick={onCreate}
+              type="button"
+            >
+              {isCreating ? '作成中...' : '署名用URLを作成'}
+            </button>
+          ) : null}
         </>
       )}
     </section>
