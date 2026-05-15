@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { doc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore'
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  updateDoc,
+  writeBatch,
+} from 'firebase/firestore'
 import { useAuth } from '../auth/AuthContext'
 import { useKyRecord } from '../hooks/useKyRecord'
 import { db } from '../lib/firebase'
@@ -99,12 +105,31 @@ export function KyDetailPage() {
       const batch = writeBatch(db)
       const signatureSessionRef = doc(db, 'signatureSessions', signatureToken)
       const kyRecordRef = doc(db, 'kyRecords', kyRecordId)
+      const siteSnapshot = await getDoc(doc(db, 'sites', kyRecord.siteId))
+      const companySnapshot = await getDoc(
+        doc(db, 'companies', kyRecord.companyId),
+      )
+
+      if (!siteSnapshot.exists() || !companySnapshot.exists()) {
+        setActionError('署名用URL作成に必要な現場または会社が見つかりません。')
+        return
+      }
+
+      const siteData = siteSnapshot.data()
+      const companyData = companySnapshot.data()
 
       batch.set(signatureSessionRef, {
         siteId: kyRecord.siteId,
+        siteName:
+          typeof siteData.name === 'string' ? siteData.name : '現場名未設定',
         companyId: kyRecord.companyId,
+        companyName:
+          typeof companyData.name === 'string'
+            ? companyData.name
+            : '会社名未設定',
         kyRecordId: kyRecord.id,
         workDate: kyRecord.workDate,
+        workItems: kyRecord.workItems,
         active: true,
         createdBy: user.uid,
         createdAt: serverTimestamp(),
@@ -323,6 +348,9 @@ function SignatureSessionPanel({
           <a className="text-link signature-url" href={signatureUrl}>
             {signatureUrl}
           </a>
+          <Link className="button-link primary" to={`/sign/${signatureSessionId}`}>
+            この端末で署名画面を開く
+          </Link>
         </div>
       ) : (
         <>
