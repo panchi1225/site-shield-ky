@@ -31,6 +31,7 @@ export type KyRecord = {
   createdAt: Date | null
   updatedBy: string
   updatedAt: Date | null
+  signatureSessionId: string | null
   signatureOpenedBy: string | null
   signatureOpenAt: Date | null
   registeredBy: string | null

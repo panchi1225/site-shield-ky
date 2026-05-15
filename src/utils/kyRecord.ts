@@ -115,6 +115,7 @@ export function toKyRecord(
     createdAt: toDate(data.createdAt),
     updatedBy: typeof data.updatedBy === 'string' ? data.updatedBy : '',
     updatedAt: toDate(data.updatedAt),
+    signatureSessionId: toNullableString(data.signatureSessionId),
     signatureOpenedBy: toNullableString(data.signatureOpenedBy),
     signatureOpenAt: toDate(data.signatureOpenAt),
     registeredBy: toNullableString(data.registeredBy),

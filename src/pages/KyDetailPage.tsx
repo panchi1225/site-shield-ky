@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore'
+import { doc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore'
 import { useAuth } from '../auth/AuthContext'
 import { useKyRecord } from '../hooks/useKyRecord'
 import { db } from '../lib/firebase'
 import type { KyRecordStatus, KyRecordWorkItem } from '../types/kyRecord'
 import { getPrimaryWorkName } from '../utils/kyRecord'
+import {
+  createSignatureToken,
+  createSignatureUrl,
+} from '../utils/signatureToken'
 
 const kyStatusLabels: Record<KyRecordStatus, string> = {
   draft: '下書き',
@@ -21,6 +25,8 @@ export function KyDetailPage() {
   const [reloadKey, setReloadKey] = useState(0)
   const [actionError, setActionError] = useState('')
   const [isOpeningSignature, setIsOpeningSignature] = useState(false)
+  const [isCreatingSignatureSession, setIsCreatingSignatureSession] =
+    useState(false)
   const { errorMessage, isLoading, isMissing, kyRecord } = useKyRecord(
     kyRecordId,
     canViewKyRecord,
@@ -66,6 +72,63 @@ export function KyDetailPage() {
       )
     } finally {
       setIsOpeningSignature(false)
+    }
+  }
+
+  async function handleCreateSignatureSession() {
+    if (!user || !kyRecordId || !kyRecord) {
+      setActionError('署名用URL作成に必要な情報が不足しています。')
+      return
+    }
+
+    if (kyRecord.status !== 'signature_open') {
+      setActionError('署名受付中のKYだけ署名用URLを作成できます。')
+      return
+    }
+
+    if (kyRecord.signatureSessionId) {
+      return
+    }
+
+    setActionError('')
+    setIsCreatingSignatureSession(true)
+
+    const signatureToken = createSignatureToken()
+
+    try {
+      const batch = writeBatch(db)
+      const signatureSessionRef = doc(db, 'signatureSessions', signatureToken)
+      const kyRecordRef = doc(db, 'kyRecords', kyRecordId)
+
+      batch.set(signatureSessionRef, {
+        siteId: kyRecord.siteId,
+        companyId: kyRecord.companyId,
+        kyRecordId: kyRecord.id,
+        workDate: kyRecord.workDate,
+        active: true,
+        createdBy: user.uid,
+        createdAt: serverTimestamp(),
+        expiresAt: null,
+        closedAt: null,
+        closedBy: null,
+      })
+
+      batch.update(kyRecordRef, {
+        signatureSessionId: signatureToken,
+        updatedBy: user.uid,
+        updatedAt: serverTimestamp(),
+      })
+
+      await batch.commit()
+      setReloadKey((current) => current + 1)
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : '署名用URLの作成に失敗しました。',
+      )
+    } finally {
+      setIsCreatingSignatureSession(false)
     }
   }
 
@@ -167,6 +230,14 @@ export function KyDetailPage() {
         </p>
       ) : null}
 
+      {kyRecord.status === 'signature_open' ? (
+        <SignatureSessionPanel
+          isCreating={isCreatingSignatureSession}
+          onCreate={handleCreateSignatureSession}
+          signatureSessionId={kyRecord.signatureSessionId}
+        />
+      ) : null}
+
       <section className="status-panel role-panel">
         <h2>KY情報</h2>
         <ul className="status-list">
@@ -227,6 +298,46 @@ function WorkItemDetail({ workItem }: { workItem: KyRecordWorkItem }) {
         <DetailBlock label="本日の重点確認事項" value={workItem.keyPoints} />
       </div>
     </article>
+  )
+}
+
+function SignatureSessionPanel({
+  isCreating,
+  onCreate,
+  signatureSessionId,
+}: {
+  isCreating: boolean
+  onCreate: () => void
+  signatureSessionId: string | null
+}) {
+  const signatureUrl = signatureSessionId
+    ? createSignatureUrl(signatureSessionId)
+    : ''
+
+  return (
+    <section className="status-panel signature-panel">
+      <h2>署名用URL</h2>
+      {signatureSessionId ? (
+        <div className="signature-url-box">
+          <p>このKYの署名用URLです。QRコード画像は後で実装します。</p>
+          <a className="text-link signature-url" href={signatureUrl}>
+            {signatureUrl}
+          </a>
+        </div>
+      ) : (
+        <>
+          <p>署名用URLはまだ作成されていません。</p>
+          <button
+            className="button-link primary"
+            disabled={isCreating}
+            onClick={onCreate}
+            type="button"
+          >
+            {isCreating ? '作成中...' : '署名用URLを作成'}
+          </button>
+        </>
+      )}
+    </section>
   )
 }
 

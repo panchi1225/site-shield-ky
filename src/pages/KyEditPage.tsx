@@ -43,10 +43,6 @@ export function KyEditPage() {
     })
   }, [kyRecord])
 
-  function updateWorkDate(value: string) {
-    setFormState((current) => ({ ...current, workDate: value }))
-  }
-
   function updateWorkItem(
     index: number,
     field: keyof Omit<KyRecordWorkItem, 'id' | 'order'>,
@@ -111,7 +107,6 @@ export function KyEditPage() {
 
     try {
       await updateDoc(doc(db, 'kyRecords', kyRecordId), {
-        workDate: formState.workDate,
         workItems,
         updatedBy: user.uid,
         updatedAt: serverTimestamp(),
@@ -233,7 +228,7 @@ export function KyEditPage() {
         <label>
           <span>作業日</span>
           <input
-            onChange={(event) => updateWorkDate(event.target.value)}
+            disabled
             required
             type="date"
             value={formState.workDate}
