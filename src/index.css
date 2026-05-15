@@ -303,6 +303,66 @@ p {
   padding: clamp(18px, 4vw, 28px);
 }
 
+.compact-form {
+  border: 0;
+  padding: 0;
+}
+
+.check-fieldset {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  border: 1px solid var(--surface-soft);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.check-fieldset legend {
+  padding: 0 4px;
+  font-weight: 700;
+}
+
+.check-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.check-label input {
+  width: 20px;
+  height: 20px;
+}
+
+.signature-pad-field {
+  display: grid;
+  gap: 10px;
+}
+
+.signature-pad-field h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.signature-canvas {
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  aspect-ratio: 32 / 11;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  touch-action: none;
+}
+
+.success-message {
+  border: 1px solid #a7f3d0;
+  border-radius: 6px;
+  background: #ecfdf5;
+  color: var(--primary-dark);
+  padding: 10px 12px;
+}
+
 .work-item-list {
   display: grid;
   gap: 14px;
@@ -369,6 +429,20 @@ p {
 .ky-record-list {
   display: grid;
   gap: 10px;
+}
+
+.worker-check-list {
+  display: grid;
+  gap: 10px;
+}
+
+.worker-check-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  border: 1px solid var(--surface-soft);
+  border-radius: 8px;
+  padding: 12px;
 }
 
 .site-item {
@@ -554,6 +628,10 @@ p {
   }
 
   .ky-record-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .worker-check-item {
     grid-template-columns: 1fr;
   }
 

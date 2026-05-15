@@ -1,9 +1,39 @@
-import { useEffect, useState } from 'react'
+import type { FormEvent, PointerEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '../lib/firebase'
-import type { SignatureSession } from '../types/signatureSession'
+import { signInAnonymously } from 'firebase/auth'
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  serverTimestamp,
+  Timestamp,
+} from 'firebase/firestore'
+import { auth, db } from '../lib/firebase'
 import type { KyRecordWorkItem } from '../types/kyRecord'
+import type { SignatureSession } from '../types/signatureSession'
+import type {
+  HealthChecks,
+  SubmittedByAuthType,
+  WorkerCheck,
+} from '../types/workerCheck'
+import {
+  createSignatureSvg,
+  hasSignature,
+  type SignatureStroke,
+} from '../utils/signatureSvg'
+
+const signatureWidth = 640
+const signatureHeight = 220
+
+const initialHealthChecks: HealthChecks = {
+  conditionOk: true,
+  sleepOk: true,
+  alcoholOk: true,
+  medicationOk: true,
+}
 
 type SignPageState = {
   errorMessage: string
@@ -11,6 +41,10 @@ type SignPageState = {
   isLoading: boolean
   isMissing: boolean
   session: SignatureSession | null
+}
+
+function toDate(value: unknown) {
+  return value instanceof Timestamp ? value.toDate() : null
 }
 
 function toWorkItem(value: unknown, index: number): KyRecordWorkItem | null {
@@ -56,15 +90,88 @@ function toSignatureSession(
     workItems,
     active: data.active === true,
     createdBy: typeof data.createdBy === 'string' ? data.createdBy : '',
-    createdAt: null,
-    expiresAt: null,
-    closedAt: null,
+    createdAt: toDate(data.createdAt),
+    expiresAt: toDate(data.expiresAt),
+    closedAt: toDate(data.closedAt),
     closedBy: typeof data.closedBy === 'string' ? data.closedBy : null,
   }
 }
 
+function toHealthChecks(value: unknown): HealthChecks {
+  if (!value || typeof value !== 'object') {
+    return {
+      conditionOk: false,
+      sleepOk: false,
+      alcoholOk: false,
+      medicationOk: false,
+    }
+  }
+
+  const data = value as Record<string, unknown>
+
+  return {
+    conditionOk: data.conditionOk === true,
+    sleepOk: data.sleepOk === true,
+    alcoholOk: data.alcoholOk === true,
+    medicationOk: data.medicationOk === true,
+  }
+}
+
+function toSubmittedByAuthType(value: unknown): SubmittedByAuthType {
+  return value === 'anonymous' || value === 'password' || value === 'unknown'
+    ? value
+    : 'unknown'
+}
+
+function toWorkerCheck(id: string, data: Record<string, unknown>): WorkerCheck {
+  return {
+    id,
+    workerName: typeof data.workerName === 'string' ? data.workerName : '',
+    healthChecks: toHealthChecks(data.healthChecks),
+    healthNote: typeof data.healthNote === 'string' ? data.healthNote : '',
+    signatureFormat: 'svg',
+    signatureData:
+      typeof data.signatureData === 'string' ? data.signatureData : '',
+    submittedByUid:
+      typeof data.submittedByUid === 'string' ? data.submittedByUid : '',
+    submittedByAuthType: toSubmittedByAuthType(data.submittedByAuthType),
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+  }
+}
+
+function getAuthType(): SubmittedByAuthType {
+  const currentUser = auth.currentUser
+
+  if (!currentUser) {
+    return 'unknown'
+  }
+
+  if (currentUser.isAnonymous) {
+    return 'anonymous'
+  }
+
+  return currentUser.providerData.some(
+    (provider) => provider.providerId === 'password',
+  )
+    ? 'password'
+    : 'unknown'
+}
+
+function allHealthOk(healthChecks: HealthChecks) {
+  return (
+    healthChecks.conditionOk &&
+    healthChecks.sleepOk &&
+    healthChecks.alcoholOk &&
+    healthChecks.medicationOk
+  )
+}
+
 export function SignPage() {
   const { token } = useParams()
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const strokesRef = useRef<SignatureStroke[]>([])
+  const isDrawingRef = useRef(false)
   const [state, setState] = useState<SignPageState>({
     errorMessage: '',
     isClosed: false,
@@ -72,6 +179,17 @@ export function SignPage() {
     isMissing: false,
     session: null,
   })
+  const [workerName, setWorkerName] = useState('')
+  const [healthChecks, setHealthChecks] =
+    useState<HealthChecks>(initialHealthChecks)
+  const [healthNote, setHealthNote] = useState('')
+  const [submitError, setSubmitError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [, setSignatureRevision] = useState(0)
+  const [workerChecks, setWorkerChecks] = useState<WorkerCheck[]>([])
+  const [workerChecksError, setWorkerChecksError] = useState('')
+  const [isWorkerChecksLoading, setIsWorkerChecksLoading] = useState(false)
 
   useEffect(() => {
     let isActive = true
@@ -160,6 +278,202 @@ export function SignPage() {
       isActive = false
     }
   }, [token])
+
+  async function loadWorkerChecks(signatureToken: string) {
+    setWorkerChecksError('')
+    setIsWorkerChecksLoading(true)
+
+    try {
+      const snapshot = await getDocs(
+        collection(db, 'signatureSessions', signatureToken, 'workerChecks'),
+      )
+      const loadedWorkerChecks = snapshot.docs
+        .map((workerCheckDoc) =>
+          toWorkerCheck(workerCheckDoc.id, workerCheckDoc.data()),
+        )
+        .sort(
+          (a, b) =>
+            (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
+        )
+
+      setWorkerChecks(loadedWorkerChecks)
+    } catch (error) {
+      setWorkerChecksError(
+        error instanceof Error
+          ? error.message
+          : '登録済み作業員一覧を読み込めませんでした。',
+      )
+    } finally {
+      setIsWorkerChecksLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!token || !state.session) {
+      setWorkerChecks([])
+      return
+    }
+
+    void loadWorkerChecks(token)
+  }, [state.session, token])
+
+  function getCanvasPoint(event: PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current
+
+    if (!canvas) {
+      return { x: 0, y: 0 }
+    }
+
+    const rect = canvas.getBoundingClientRect()
+
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * signatureWidth,
+      y: ((event.clientY - rect.top) / rect.height) * signatureHeight,
+    }
+  }
+
+  function getCanvasContext() {
+    const canvas = canvasRef.current
+    const context = canvas?.getContext('2d')
+
+    if (!context) {
+      return null
+    }
+
+    context.lineCap = 'round'
+    context.lineJoin = 'round'
+    context.lineWidth = 3
+    context.strokeStyle = '#111827'
+
+    return context
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current
+    const context = getCanvasContext()
+
+    if (!canvas || !context) {
+      return
+    }
+
+    canvas.setPointerCapture(event.pointerId)
+    const point = getCanvasPoint(event)
+    strokesRef.current = [...strokesRef.current, [point]]
+    isDrawingRef.current = true
+
+    context.beginPath()
+    context.moveTo(point.x, point.y)
+    setSignatureRevision((current) => current + 1)
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLCanvasElement>) {
+    if (!isDrawingRef.current) {
+      return
+    }
+
+    const context = getCanvasContext()
+    const currentStroke = strokesRef.current[strokesRef.current.length - 1]
+
+    if (!context || !currentStroke) {
+      return
+    }
+
+    const point = getCanvasPoint(event)
+    currentStroke.push(point)
+    context.lineTo(point.x, point.y)
+    context.stroke()
+  }
+
+  function handlePointerUp(event: PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current
+    isDrawingRef.current = false
+    canvas?.releasePointerCapture(event.pointerId)
+  }
+
+  function clearSignature() {
+    const canvas = canvasRef.current
+    const context = canvas?.getContext('2d')
+    context?.clearRect(0, 0, signatureWidth, signatureHeight)
+    strokesRef.current = []
+    setSignatureRevision((current) => current + 1)
+  }
+
+  function resetForm() {
+    setWorkerName('')
+    setHealthChecks(initialHealthChecks)
+    setHealthNote('')
+    clearSignature()
+  }
+
+  function updateHealthCheck(field: keyof HealthChecks, value: boolean) {
+    setHealthChecks((current) => ({ ...current, [field]: value }))
+  }
+
+  async function getSubmitter() {
+    if (auth.currentUser) {
+      return auth.currentUser
+    }
+
+    const credential = await signInAnonymously(auth)
+    return credential.user
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!token || !state.session) {
+      setSubmitError('署名セッション情報が不足しています。')
+      return
+    }
+
+    if (!workerName.trim()) {
+      setSubmitError('作業員名を入力してください。')
+      return
+    }
+
+    if (!hasSignature(strokesRef.current)) {
+      setSubmitError('署名を入力してください。')
+      return
+    }
+
+    setSubmitError('')
+    setSuccessMessage('')
+    setIsSubmitting(true)
+
+    try {
+      const submitter = await getSubmitter()
+      const submittedByAuthType = getAuthType()
+      const signatureData = createSignatureSvg(
+        strokesRef.current,
+        signatureWidth,
+        signatureHeight,
+      )
+
+      await addDoc(collection(db, 'signatureSessions', token, 'workerChecks'), {
+        workerName: workerName.trim(),
+        healthChecks,
+        healthNote: healthNote.trim(),
+        signatureFormat: 'svg',
+        signatureData,
+        submittedByUid: submitter.uid,
+        submittedByAuthType,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+
+      setSuccessMessage('登録しました。次の作業員を入力してください。')
+      resetForm()
+      await loadWorkerChecks(token)
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : '署名・健康チェックの登録に失敗しました。',
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   if (state.isLoading) {
     return (
@@ -259,13 +573,138 @@ export function SignPage() {
         </div>
       </section>
 
-      <section className="status-panel placeholder">
+      <section className="status-panel">
         <h2>署名・健康チェック</h2>
-        <p>
-          ここに署名・健康チェック機能を後で実装します。1人が登録した後に画面をリセットし、次の作業員が同じ端末で続けて入力できる設計にします。
-        </p>
+        <form className="data-form compact-form" onSubmit={handleSubmit}>
+          <label>
+            <span>作業員名</span>
+            <input
+              onChange={(event) => setWorkerName(event.target.value)}
+              required
+              type="text"
+              value={workerName}
+            />
+          </label>
+
+          <fieldset className="check-fieldset">
+            <legend>健康チェック</legend>
+            <HealthCheckLabel
+              checked={healthChecks.conditionOk}
+              label="体調は良好です"
+              onChange={(value) => updateHealthCheck('conditionOk', value)}
+            />
+            <HealthCheckLabel
+              checked={healthChecks.sleepOk}
+              label="睡眠は十分です"
+              onChange={(value) => updateHealthCheck('sleepOk', value)}
+            />
+            <HealthCheckLabel
+              checked={healthChecks.alcoholOk}
+              label="飲酒の影響はありません"
+              onChange={(value) => updateHealthCheck('alcoholOk', value)}
+            />
+            <HealthCheckLabel
+              checked={healthChecks.medicationOk}
+              label="作業に支障のある薬の服用はありません"
+              onChange={(value) => updateHealthCheck('medicationOk', value)}
+            />
+          </fieldset>
+
+          <label>
+            <span>体調メモ</span>
+            <textarea
+              onChange={(event) => setHealthNote(event.target.value)}
+              rows={3}
+              value={healthNote}
+            />
+          </label>
+
+          <div className="signature-pad-field">
+            <div className="work-item-header">
+              <h3>署名</h3>
+              <button className="button-link" onClick={clearSignature} type="button">
+                クリア
+              </button>
+            </div>
+            <canvas
+              className="signature-canvas"
+              height={signatureHeight}
+              onPointerCancel={handlePointerUp}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              ref={canvasRef}
+              width={signatureWidth}
+            />
+            <p>
+              {hasSignature(strokesRef.current)
+                ? '署名が入力されています。'
+                : '枠内に指またはマウスで署名してください。'}
+            </p>
+          </div>
+
+          {successMessage ? (
+            <p className="success-message" role="status">
+              {successMessage}
+            </p>
+          ) : null}
+
+          {submitError ? (
+            <p className="form-error" role="alert">
+              {submitError}
+            </p>
+          ) : null}
+
+          <button className="button-link primary" disabled={isSubmitting}>
+            {isSubmitting ? '登録中...' : '署名・健康チェックを登録'}
+          </button>
+        </form>
+      </section>
+
+      <section className="status-panel">
+        <h2>登録済み作業員</h2>
+        {isWorkerChecksLoading ? (
+          <p>登録済み作業員を読み込んでいます。</p>
+        ) : workerChecksError ? (
+          <p className="form-error">{workerChecksError}</p>
+        ) : workerChecks.length === 0 ? (
+          <p>まだ登録済み作業員はいません。</p>
+        ) : (
+          <div className="worker-check-list">
+            {workerChecks.map((workerCheck) => (
+              <div className="worker-check-item" key={workerCheck.id}>
+                <span>{workerCheck.workerName || '作業員名未設定'}</span>
+                <span>
+                  {allHealthOk(workerCheck.healthChecks) ? '良好' : '要確認'}
+                </span>
+                <span>{formatDateTime(workerCheck.createdAt)}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </section>
+  )
+}
+
+function HealthCheckLabel({
+  checked,
+  label,
+  onChange,
+}: {
+  checked: boolean
+  label: string
+  onChange: (value: boolean) => void
+}) {
+  return (
+    <label className="check-label">
+      <input
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        type="checkbox"
+      />
+      <span>{label}</span>
+    </label>
   )
 }
 
@@ -276,4 +715,15 @@ function DetailBlock({ label, value }: { label: string; value: string }) {
       <p>{value || '未設定'}</p>
     </div>
   )
+}
+
+function formatDateTime(value: Date | null) {
+  if (!value) {
+    return '未設定'
+  }
+
+  return new Intl.DateTimeFormat('ja-JP', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(value)
 }
