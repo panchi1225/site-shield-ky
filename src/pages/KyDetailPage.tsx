@@ -246,6 +246,12 @@ export function KyDetailPage() {
               {isOpeningSignature ? '開始中...' : '署名受付を開始する'}
             </button>
           ) : null}
+          <Link
+            className="button-link"
+            to={`/app/sites/${siteId}/companies/${companyId}/ky/${kyRecord.id}/signatures`}
+          >
+            署名確認
+          </Link>
         </div>
       </div>
 

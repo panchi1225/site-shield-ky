@@ -421,6 +421,43 @@ p {
   overflow-wrap: anywhere;
 }
 
+.signature-review-list {
+  display: grid;
+  gap: 14px;
+}
+
+.signature-review-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--surface-soft);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.signature-review-card h3,
+.signature-review-card h4 {
+  margin: 0;
+}
+
+.signature-preview {
+  display: grid;
+  gap: 8px;
+}
+
+.signature-svg-box {
+  max-width: 420px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px;
+}
+
+.signature-svg-box svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .site-list {
   display: grid;
   gap: 10px;
@@ -581,6 +618,11 @@ p {
 .status-badge.active {
   background: #e7f8f2;
   color: var(--primary-dark);
+}
+
+.status-badge.warning {
+  background: #fff7ed;
+  color: #c2410c;
 }
 
 .workspace-grid {

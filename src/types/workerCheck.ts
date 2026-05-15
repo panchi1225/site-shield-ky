@@ -6,3 +6,15 @@ export type HealthChecks = {
 }
 
 export type SubmittedByAuthType = 'anonymous' | 'password' | 'unknown'
+
+export type WorkerCheck = {
+  id: string
+  healthChecks: HealthChecks
+  healthNote: string
+  signatureFormat: 'svg'
+  signatureData: string
+  submittedByUid: string
+  submittedByAuthType: SubmittedByAuthType
+  createdAt: Date | null
+  updatedAt: Date | null
+}
