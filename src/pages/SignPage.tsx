@@ -32,11 +32,13 @@ const initialHealthChecks: HealthChecks = {
 
 type SignPageState = {
   errorMessage: string
-  isClosed: boolean
   isLoading: boolean
   isMissing: boolean
   session: SignatureSession | null
 }
+
+const unavailableSignatureSessionMessage =
+  '署名セッションが見つからないか、署名受付が終了しています。'
 
 function toDate(value: unknown) {
   return value instanceof Timestamp ? value.toDate() : null
@@ -117,7 +119,6 @@ export function SignPage() {
   const isDrawingRef = useRef(false)
   const [state, setState] = useState<SignPageState>({
     errorMessage: '',
-    isClosed: false,
     isLoading: false,
     isMissing: false,
     session: null,
@@ -137,7 +138,6 @@ export function SignPage() {
     async function loadSignatureSession(signatureToken: string) {
       setState({
         errorMessage: '',
-        isClosed: false,
         isLoading: true,
         isMissing: false,
         session: null,
@@ -155,7 +155,6 @@ export function SignPage() {
         if (!snapshot.exists()) {
           setState({
             errorMessage: '',
-            isClosed: false,
             isLoading: false,
             isMissing: true,
             session: null,
@@ -168,9 +167,8 @@ export function SignPage() {
         if (!session.active) {
           setState({
             errorMessage: '',
-            isClosed: true,
             isLoading: false,
-            isMissing: false,
+            isMissing: true,
             session: null,
           })
           return
@@ -178,7 +176,6 @@ export function SignPage() {
 
         setState({
           errorMessage: '',
-          isClosed: false,
           isLoading: false,
           isMissing: false,
           session,
@@ -189,11 +186,7 @@ export function SignPage() {
         }
 
         setState({
-          errorMessage:
-            error instanceof Error
-              ? error.message
-              : '署名セッションを読み込めませんでした。',
-          isClosed: false,
+          errorMessage: unavailableSignatureSessionMessage,
           isLoading: false,
           isMissing: false,
           session: null,
@@ -204,7 +197,6 @@ export function SignPage() {
     if (!token) {
       setState({
         errorMessage: '署名用トークンが指定されていません。',
-        isClosed: false,
         isLoading: false,
         isMissing: false,
         session: null,
@@ -385,19 +377,8 @@ export function SignPage() {
     return (
       <section className="page sign-page">
         <div className="status-panel warning-panel">
-          <h1>署名セッションが見つかりません</h1>
-          <p>URLが正しいか確認してください。</p>
-        </div>
-      </section>
-    )
-  }
-
-  if (state.isClosed) {
-    return (
-      <section className="page sign-page">
-        <div className="status-panel warning-panel">
-          <h1>署名受付は終了しています</h1>
-          <p>この署名用URLは現在利用できません。</p>
+          <h1>署名できません</h1>
+          <p>{unavailableSignatureSessionMessage}</p>
         </div>
       </section>
     )
@@ -407,7 +388,7 @@ export function SignPage() {
     return (
       <section className="page sign-page">
         <div className="status-panel warning-panel">
-          <h1>署名セッションを読み込めませんでした</h1>
+          <h1>署名できません</h1>
           <p>{state.errorMessage}</p>
         </div>
       </section>

@@ -1,17 +1,33 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { doc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { useAuth } from '../auth/AuthContext'
 import { useKyRecord } from '../hooks/useKyRecord'
 import { useWorkerChecks } from '../hooks/useWorkerChecks'
+import { db } from '../lib/firebase'
+import type { KyRecordStatus } from '../types/kyRecord'
 import type { HealthChecks, WorkerCheck } from '../types/workerCheck'
 import { getPrimaryWorkName } from '../utils/kyRecord'
 
+const kyStatusLabels: Record<KyRecordStatus, string> = {
+  draft: '下書き',
+  signature_open: '署名受付中',
+  registered: '登録済み',
+  stamped: '押印済み',
+}
+
 export function KySignaturesPage() {
   const { companyId, kyRecordId, siteId } = useParams()
-  const { appUser } = useAuth()
+  const { appUser, user } = useAuth()
   const canViewSignatures = appUser?.role === 'admin'
+  const [reloadKey, setReloadKey] = useState(0)
+  const [registerError, setRegisterError] = useState('')
+  const [registerSuccessMessage, setRegisterSuccessMessage] = useState('')
+  const [isRegistering, setIsRegistering] = useState(false)
   const { errorMessage, isLoading, isMissing, kyRecord } = useKyRecord(
     kyRecordId,
     canViewSignatures,
+    reloadKey,
   )
   const isKyForUrl =
     kyRecord?.siteId === siteId && kyRecord?.companyId === companyId
@@ -22,6 +38,68 @@ export function KySignaturesPage() {
     isLoading: isWorkerChecksLoading,
     workerChecks,
   } = useWorkerChecks(kyRecord?.signatureSessionId, canLoadWorkerChecks)
+
+  async function handleRegisterKy() {
+    if (!user || !kyRecord) {
+      setRegisterError('KY登録に必要なログイン情報が不足しています。')
+      return
+    }
+
+    if (kyRecord.status !== 'signature_open') {
+      setRegisterError('署名受付中のKYだけ登録できます。')
+      return
+    }
+
+    if (!kyRecord.signatureSessionId) {
+      setRegisterError('署名セッションが作成されていません。')
+      return
+    }
+
+    if (workerChecks.length === 0) {
+      setRegisterError('署名が1件以上必要です。')
+      return
+    }
+
+    const shouldRegister = window.confirm(
+      'このKYを登録済みにします。登録後は署名受付を終了します。よろしいですか？',
+    )
+
+    if (!shouldRegister) {
+      return
+    }
+
+    setRegisterError('')
+    setRegisterSuccessMessage('')
+    setIsRegistering(true)
+
+    try {
+      const batch = writeBatch(db)
+
+      batch.update(doc(db, 'kyRecords', kyRecord.id), {
+        status: 'registered',
+        registeredBy: user.uid,
+        registeredAt: serverTimestamp(),
+        updatedBy: user.uid,
+        updatedAt: serverTimestamp(),
+      })
+
+      batch.update(doc(db, 'signatureSessions', kyRecord.signatureSessionId), {
+        active: false,
+        closedBy: user.uid,
+        closedAt: serverTimestamp(),
+      })
+
+      await batch.commit()
+      setRegisterSuccessMessage('KYを登録しました。署名受付は終了しました。')
+      setReloadKey((current) => current + 1)
+    } catch (error) {
+      setRegisterError(
+        error instanceof Error ? error.message : 'KY登録に失敗しました。',
+      )
+    } finally {
+      setIsRegistering(false)
+    }
+  }
 
   if (!canViewSignatures) {
     return (
@@ -117,11 +195,50 @@ export function KySignaturesPage() {
         </div>
       </div>
 
+      <section className="status-panel signature-panel">
+        <div className="section-heading">
+          <div>
+            <h2>KY登録</h2>
+            <p>
+              署名確認後、問題がなければKYを登録済みにして署名受付を終了します。
+            </p>
+          </div>
+          {kyRecord.status === 'signature_open' ? (
+            <button
+              className="button-link primary"
+              disabled={isRegistering || isWorkerChecksLoading}
+              onClick={handleRegisterKy}
+              type="button"
+            >
+              {isRegistering ? '登録中...' : 'KYを登録する'}
+            </button>
+          ) : (
+            <span className="status-badge active">
+              {kyStatusLabels[kyRecord.status]}
+            </span>
+          )}
+        </div>
+        {kyRecord.status === 'signature_open' && workerChecks.length === 0 ? (
+          <p className="form-error">署名が1件以上必要です。</p>
+        ) : null}
+        {registerSuccessMessage ? (
+          <p className="success-message" role="status">
+            {registerSuccessMessage}
+          </p>
+        ) : null}
+        {registerError ? (
+          <p className="form-error" role="alert">
+            {registerError}
+          </p>
+        ) : null}
+      </section>
+
       <section className="status-panel role-panel">
         <h2>対象KY</h2>
         <ul className="status-list">
           <DetailRow label="作業日" value={kyRecord.workDate} />
           <DetailRow label="代表作業名" value={getPrimaryWorkName(kyRecord)} />
+          <DetailRow label="status" value={kyStatusLabels[kyRecord.status]} />
           <DetailRow
             label="署名セッションID"
             value={kyRecord.signatureSessionId ?? '未作成'}
