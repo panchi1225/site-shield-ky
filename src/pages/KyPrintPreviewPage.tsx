@@ -6,12 +6,7 @@ import { useSite } from '../hooks/useSite'
 import { useWorkerChecks } from '../hooks/useWorkerChecks'
 import type { KyRecordWorkItem } from '../types/kyRecord'
 import type { MedicationStatus, WorkerCheck } from '../types/workerCheck'
-import {
-  createEmptyWorkItem,
-  getPossibilityLabel,
-  getSeverityLabel,
-  riskLevelDescriptions,
-} from '../utils/kyRecord'
+import { createEmptyWorkItem } from '../utils/kyRecord'
 
 const rowsPerSignaturePage = 14
 
@@ -20,13 +15,6 @@ const medicationMarks: Record<MedicationStatus, string> = {
   forgot: '×',
   none: '-',
 }
-
-const statusLabels = {
-  draft: '下書き',
-  signature_open: '署名受付中',
-  registered: '登録済み',
-  stamped: '押印済み',
-} as const
 
 export function KyPrintPreviewPage() {
   const { companyId, kyRecordId, siteId } = useParams()
@@ -165,7 +153,6 @@ export function KyPrintPreviewPage() {
           <PrintField label="会社名" value={company?.name ?? ''} />
           <PrintField label="実施日" value={kyRecord.workDate} />
           <PrintField label="天候" value={kyRecord.weather} />
-          <PrintField label="状態" value={statusLabels[kyRecord.status]} />
         </section>
 
         <section>
@@ -191,14 +178,17 @@ export function KyPrintPreviewPage() {
           </table>
         </section>
 
-        <RiskCriteriaTable />
-
-        <section>
-          <h2 className="print-section-title">参加者・健康状態チェック</h2>
-          <WorkerChecksTable
-            startIndex={0}
-            workerChecks={signaturePages[0] ?? []}
-          />
+        <section className="print-bottom-grid">
+          <div>
+            <h2 className="print-section-title">
+              参加者・健康状態チェック（本人記入）
+            </h2>
+            <WorkerChecksTable
+              startIndex={0}
+              workerChecks={signaturePages[0] ?? []}
+            />
+          </div>
+          <RiskCriteriaPanel />
         </section>
       </article>
 
@@ -280,81 +270,104 @@ function RiskRow({ workItem }: { workItem: KyRecordWorkItem }) {
   )
 }
 
-function RiskCriteriaTable() {
+function RiskCriteriaPanel() {
   return (
-    <section>
-      <h2 className="print-section-title">評価基準表</h2>
-      <div className="criteria-print-grid">
-        <table className="print-table criteria-table-print">
+    <section className="risk-estimate-panel">
+      <h2>◎危険度（リスクレベル）の見積もり</h2>
+      <div className="risk-estimate-top">
+        <table className="print-table risk-estimate-table">
           <thead>
             <tr>
-              <th colSpan={2}>可能性</th>
+              <th>①可能性</th>
+              <th>点数</th>
             </tr>
           </thead>
           <tbody>
             <tr>
+              <td>
+                ほとんど起こらない
+                <br />
+                （5年に1回程度発生）
+              </td>
               <td>1</td>
-              <td>{getPossibilityLabel(1)}</td>
             </tr>
             <tr>
+              <td>
+                たまに起こる
+                <br />
+                （1年に1回程度発生）
+              </td>
               <td>2</td>
-              <td>{getPossibilityLabel(2)}</td>
             </tr>
             <tr>
+              <td>
+                かなり起こる
+                <br />
+                （半年に1回程度発生）
+              </td>
               <td>3</td>
-              <td>{getPossibilityLabel(3)}</td>
             </tr>
           </tbody>
         </table>
 
-        <table className="print-table criteria-table-print">
-          <thead>
-            <tr>
-              <th colSpan={2}>重大性</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>1</td>
-              <td>{getSeverityLabel(1)}</td>
-            </tr>
-            <tr>
-              <td>2</td>
-              <td>{getSeverityLabel(2)}</td>
-            </tr>
-            <tr>
-              <td>3</td>
-              <td>{getSeverityLabel(3)}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="risk-estimate-times">×</div>
 
-        <table className="print-table criteria-table-print">
+        <table className="print-table risk-estimate-table">
           <thead>
             <tr>
-              <th colSpan={2}>危険度</th>
+              <th>②重大性</th>
+              <th>点数</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>I</td>
-              <td>{riskLevelDescriptions.I}</td>
+              <td>休業4日未満</td>
+              <td>1</td>
             </tr>
             <tr>
-              <td>II</td>
-              <td>{riskLevelDescriptions.II}</td>
+              <td>休業4日以上</td>
+              <td>2</td>
             </tr>
             <tr>
-              <td>III</td>
-              <td>{riskLevelDescriptions.III}</td>
-            </tr>
-            <tr>
-              <td>IV</td>
-              <td>{riskLevelDescriptions.IV}</td>
+              <td>死亡、傷害</td>
+              <td>3</td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <h2>◎評価・危険度に基づく対策検討基準</h2>
+      <table className="print-table risk-action-table">
+        <thead>
+          <tr>
+            <th>③評価</th>
+            <th>危険度</th>
+            <th>対策検討基準</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1〜2点</td>
+            <td>I</td>
+            <td>計画的に改善が必要</td>
+          </tr>
+          <tr>
+            <td>3〜4点</td>
+            <td>II</td>
+            <td>何らか対策が必要</td>
+          </tr>
+          <tr>
+            <td>6点</td>
+            <td>III</td>
+            <td>抜本的な対策が必要</td>
+          </tr>
+          <tr>
+            <td>9点</td>
+            <td>IV</td>
+            <td>直ちに対策が必要</td>
+          </tr>
+        </tbody>
+      </table>
     </section>
   )
 }
@@ -377,13 +390,15 @@ function WorkerChecksTable({
           <th>No.</th>
           <th>氏名</th>
           <th>体温（℃）</th>
-          <th>alc.チェック（mg）</th>
+          <th>
+            alc.チェック
+            <br />
+            （mg）
+          </th>
           <th>体調</th>
           <th>睡眠</th>
           <th>朝食</th>
           <th>服薬</th>
-          <th>服薬内容</th>
-          <th>体調メモ</th>
         </tr>
       </thead>
       <tbody>
@@ -441,8 +456,6 @@ function WorkerCheckRow({
       <td className="center-cell">
         {workerCheck ? medicationMarks[workerCheck.medicationStatus] : ''}
       </td>
-      <td>{workerCheck?.medicationNote ?? ''}</td>
-      <td>{workerCheck?.healthNote ?? ''}</td>
     </tr>
   )
 }
@@ -454,13 +467,20 @@ function mark(value: boolean) {
 function getDisplayableSignatureSvg(workerCheck: WorkerCheck) {
   const signatureData = workerCheck.signatureData.trim()
   const lowerSignatureData = signatureData.toLowerCase()
+  const blockedPatterns = [
+    '<script',
+    'javascript:',
+    'onload=',
+    'onerror=',
+    'onclick=',
+    'onmouseover=',
+  ]
 
   if (
     workerCheck.signatureFormat !== 'svg' ||
     !signatureData.startsWith('<svg') ||
     !signatureData.includes('</svg>') ||
-    lowerSignatureData.includes('<script') ||
-    lowerSignatureData.includes('onload=')
+    blockedPatterns.some((pattern) => lowerSignatureData.includes(pattern))
   ) {
     return ''
   }

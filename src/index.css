@@ -705,14 +705,14 @@ p {
   min-height: 210mm;
   display: grid;
   align-content: start;
-  gap: 4mm;
+  gap: 2.2mm;
   margin: 0 auto;
   background: #ffffff;
   box-shadow: 0 12px 34px rgba(15, 23, 42, 0.14);
   color: #111827;
   font-family: "Yu Gothic", "Meiryo", "Noto Sans JP", sans-serif;
-  font-size: 9px;
-  padding: 8mm;
+  font-size: 7.5px;
+  padding: 5mm;
 }
 
 .print-title-row,
@@ -727,20 +727,20 @@ p {
 .print-continuation-header h1 {
   margin: 0;
   max-width: none;
-  font-size: 18px;
+  font-size: 15px;
   letter-spacing: 0;
 }
 
 .print-subtitle {
-  margin: 0 0 1mm;
+  margin: 0 0 0.5mm;
   color: #111827;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
 }
 
 .prime-stamp-box {
-  width: 34mm;
-  height: 18mm;
+  width: 28mm;
+  height: 14mm;
   display: grid;
   place-items: start center;
   border: 1px solid #111827;
@@ -751,7 +751,7 @@ p {
 
 .print-basic-grid {
   display: grid;
-  grid-template-columns: 2fr 1.4fr 0.9fr 0.8fr 0.8fr;
+  grid-template-columns: 2fr 1.4fr 0.9fr 0.8fr;
   border-top: 1px solid #111827;
   border-left: 1px solid #111827;
 }
@@ -759,7 +759,7 @@ p {
 .print-field {
   display: grid;
   grid-template-columns: auto 1fr;
-  min-height: 8mm;
+  min-height: 6mm;
   border-right: 1px solid #111827;
   border-bottom: 1px solid #111827;
 }
@@ -767,11 +767,11 @@ p {
 .print-field span {
   display: grid;
   place-items: center;
-  min-width: 18mm;
+  min-width: 16mm;
   background: #f3f4f6;
   border-right: 1px solid #111827;
   font-weight: 700;
-  padding: 1mm;
+  padding: 0.6mm;
 }
 
 .print-field strong {
@@ -780,12 +780,12 @@ p {
   min-width: 0;
   font-weight: 700;
   overflow-wrap: anywhere;
-  padding: 1mm 1.5mm;
+  padding: 0.6mm 1mm;
 }
 
 .print-section-title {
-  margin: 0 0 1mm;
-  font-size: 11px;
+  margin: 0 0 0.6mm;
+  font-size: 9px;
   letter-spacing: 0;
 }
 
@@ -799,8 +799,8 @@ p {
 .print-table td {
   border: 1px solid #111827;
   color: #111827;
-  line-height: 1.25;
-  padding: 1mm;
+  line-height: 1.15;
+  padding: 0.45mm;
   vertical-align: middle;
   word-break: break-word;
 }
@@ -813,7 +813,7 @@ p {
 
 .risk-table th:nth-child(1),
 .risk-table td:nth-child(1) {
-  width: 8mm;
+  width: 7mm;
 }
 
 .risk-table th:nth-child(2),
@@ -837,7 +837,14 @@ p {
 }
 
 .risk-table tbody td {
-  height: 13mm;
+  height: 9.5mm;
+}
+
+.print-bottom-grid {
+  display: grid;
+  grid-template-columns: 1.22fr 0.95fr;
+  gap: 4mm;
+  align-items: start;
 }
 
 .criteria-print-grid {
@@ -859,14 +866,14 @@ p {
 
 .worker-check-table th:nth-child(2),
 .worker-check-table td:nth-child(2) {
-  width: 28mm;
+  width: 33mm;
 }
 
 .worker-check-table th:nth-child(3),
 .worker-check-table td:nth-child(3),
 .worker-check-table th:nth-child(4),
 .worker-check-table td:nth-child(4) {
-  width: 17mm;
+  width: 16mm;
 }
 
 .worker-check-table th:nth-child(5),
@@ -877,18 +884,11 @@ p {
 .worker-check-table td:nth-child(7),
 .worker-check-table th:nth-child(8),
 .worker-check-table td:nth-child(8) {
-  width: 10mm;
-}
-
-.worker-check-table th:nth-child(9),
-.worker-check-table td:nth-child(9),
-.worker-check-table th:nth-child(10),
-.worker-check-table td:nth-child(10) {
-  width: 31mm;
+  width: 9mm;
 }
 
 .worker-check-table tbody td {
-  height: 8.5mm;
+  height: 6.8mm;
 }
 
 .number-cell,
@@ -901,7 +901,7 @@ p {
 }
 
 .print-signature-box {
-  height: 7mm;
+  height: 5.8mm;
   overflow: hidden;
 }
 
@@ -921,9 +921,70 @@ p {
   font-size: 9px;
 }
 
+.risk-estimate-panel {
+  display: grid;
+  gap: 2mm;
+  color: #ff0000;
+}
+
+.risk-estimate-panel h2 {
+  margin: 0;
+  color: #ff0000;
+  font-size: 8.5px;
+  letter-spacing: 0;
+}
+
+.risk-estimate-panel .print-table th,
+.risk-estimate-panel .print-table td {
+  color: #ff0000;
+  border-color: #111827;
+  text-align: center;
+  font-weight: 700;
+}
+
+.risk-estimate-panel .print-table th {
+  background: #e5e5e5;
+}
+
+.risk-estimate-top {
+  display: grid;
+  grid-template-columns: 1fr 8mm 0.82fr;
+  align-items: center;
+  gap: 2mm;
+}
+
+.risk-estimate-times {
+  color: #ff0000;
+  font-size: 18px;
+  text-align: center;
+}
+
+.risk-estimate-table tbody td {
+  height: 8.5mm;
+}
+
+.risk-estimate-table th:last-child,
+.risk-estimate-table td:last-child {
+  width: 10mm;
+}
+
+.risk-action-table th:nth-child(1),
+.risk-action-table td:nth-child(1) {
+  width: 22mm;
+}
+
+.risk-action-table th:nth-child(2),
+.risk-action-table td:nth-child(2) {
+  width: 14mm;
+}
+
+.risk-action-table tbody td {
+  height: 5.7mm;
+}
+
 @page {
   size: A4 landscape;
-  margin: 8mm;
+  margin: 6mm;
 }
 
 @media print {
