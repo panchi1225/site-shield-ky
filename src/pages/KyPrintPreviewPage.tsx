@@ -8,7 +8,7 @@ import type { KyRecordWorkItem } from '../types/kyRecord'
 import type { MedicationStatus, WorkerCheck } from '../types/workerCheck'
 import { createEmptyWorkItem } from '../utils/kyRecord'
 
-const rowsPerSignaturePage = 14
+const rowsPerSignaturePage = 15
 
 const medicationMarks: Record<MedicationStatus, string> = {
   taken: '○',
@@ -140,8 +140,7 @@ export function KyPrintPreviewPage() {
       <article className="print-sheet ky-print-sheet">
         <header className="print-title-row">
           <div>
-            <p className="print-subtitle">リスクアセスメントKY</p>
-            <h1>リスクアセスメントKY</h1>
+            <h1>リスクアセスメントKY活動表</h1>
           </div>
           <div className="prime-stamp-box">
             <span>元請確認欄</span>

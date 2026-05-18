@@ -705,7 +705,7 @@ p {
   min-height: 210mm;
   display: grid;
   align-content: start;
-  gap: 2.2mm;
+  gap: 1.8mm;
   margin: 0 auto;
   background: #ffffff;
   box-shadow: 0 12px 34px rgba(15, 23, 42, 0.14);
@@ -728,6 +728,7 @@ p {
   margin: 0;
   max-width: none;
   font-size: 15px;
+  line-height: 1.1;
   letter-spacing: 0;
 }
 
@@ -784,8 +785,9 @@ p {
 }
 
 .print-section-title {
-  margin: 0 0 0.6mm;
+  margin: 0 0 0.4mm;
   font-size: 9px;
+  line-height: 1.1;
   letter-spacing: 0;
 }
 
@@ -799,8 +801,8 @@ p {
 .print-table td {
   border: 1px solid #111827;
   color: #111827;
-  line-height: 1.15;
-  padding: 0.45mm;
+  line-height: 1.1;
+  padding: 0.35mm;
   vertical-align: middle;
   word-break: break-word;
 }
@@ -888,7 +890,7 @@ p {
 }
 
 .worker-check-table tbody td {
-  height: 6.8mm;
+  height: 6.1mm;
 }
 
 .number-cell,
@@ -901,7 +903,7 @@ p {
 }
 
 .print-signature-box {
-  height: 5.8mm;
+  height: 5.2mm;
   overflow: hidden;
 }
 
@@ -923,14 +925,15 @@ p {
 
 .risk-estimate-panel {
   display: grid;
-  gap: 2mm;
+  gap: 1.1mm;
   color: #ff0000;
 }
 
 .risk-estimate-panel h2 {
   margin: 0;
   color: #ff0000;
-  font-size: 8.5px;
+  font-size: 8px;
+  line-height: 1.1;
   letter-spacing: 0;
 }
 
@@ -950,17 +953,17 @@ p {
   display: grid;
   grid-template-columns: 1fr 8mm 0.82fr;
   align-items: center;
-  gap: 2mm;
+  gap: 1.4mm;
 }
 
 .risk-estimate-times {
   color: #ff0000;
-  font-size: 18px;
+  font-size: 16px;
   text-align: center;
 }
 
 .risk-estimate-table tbody td {
-  height: 8.5mm;
+  height: 7.1mm;
 }
 
 .risk-estimate-table th:last-child,
@@ -979,7 +982,7 @@ p {
 }
 
 .risk-action-table tbody td {
-  height: 5.7mm;
+  height: 4.7mm;
 }
 
 @page {
