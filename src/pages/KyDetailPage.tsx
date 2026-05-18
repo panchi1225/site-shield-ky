@@ -259,6 +259,12 @@ export function KyDetailPage() {
           >
             署名確認
           </Link>
+          <Link
+            className="button-link"
+            to={`/app/sites/${siteId}/companies/${companyId}/ky/${kyRecord.id}/print`}
+          >
+            PDFプレビュー
+          </Link>
         </div>
       </div>
 

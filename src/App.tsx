@@ -6,6 +6,7 @@ import { HomePage } from './pages/HomePage'
 import { KyCreatePage } from './pages/KyCreatePage'
 import { KyDetailPage } from './pages/KyDetailPage'
 import { KyEditPage } from './pages/KyEditPage'
+import { KyPrintPreviewPage } from './pages/KyPrintPreviewPage'
 import { KySignaturesPage } from './pages/KySignaturesPage'
 import { LoginPage } from './pages/LoginPage'
 import { SignPage } from './pages/SignPage'
@@ -89,6 +90,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <KySignaturesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/app/sites/:siteId/companies/:companyId/ky/:kyRecordId/print"
+            element={
+              <ProtectedRoute>
+                <KyPrintPreviewPage />
               </ProtectedRoute>
             }
           />
