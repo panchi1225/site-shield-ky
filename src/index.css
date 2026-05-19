@@ -704,15 +704,15 @@ p {
   width: 297mm;
   min-height: 210mm;
   display: grid;
-  align-content: start;
-  gap: 1.8mm;
+  align-content: center;
+  gap: 1.6mm;
   margin: 0 auto;
   background: #ffffff;
   box-shadow: 0 12px 34px rgba(15, 23, 42, 0.14);
   color: #111827;
   font-family: "Yu Gothic", "Meiryo", "Noto Sans JP", sans-serif;
-  font-size: 7.5px;
-  padding: 5mm;
+  font-size: 8.4px;
+  padding: 6mm 7mm;
 }
 
 .print-title-row,
@@ -765,7 +765,7 @@ p {
 .print-field {
   display: grid;
   grid-template-columns: auto 1fr;
-  min-height: 6mm;
+  min-height: 6.3mm;
   border-right: 1px solid #111827;
   border-bottom: 1px solid #111827;
 }
@@ -777,7 +777,7 @@ p {
   background: #f3f4f6;
   border-right: 1px solid #111827;
   font-weight: 700;
-  padding: 0.6mm;
+  padding: 0.7mm;
 }
 
 .print-field strong {
@@ -786,12 +786,18 @@ p {
   min-width: 0;
   font-weight: 700;
   overflow-wrap: anywhere;
-  padding: 0.6mm 1mm;
+  padding: 0.7mm 1mm;
+}
+
+.print-input-value {
+  justify-content: flex-start;
+  text-align: left;
+  padding-left: 1em;
 }
 
 .print-section-title {
   margin: 0 0 0.4mm;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.1;
   letter-spacing: 0;
 }
@@ -807,7 +813,7 @@ p {
   border: 1px solid #111827;
   color: #111827;
   line-height: 1.1;
-  padding: 0.35mm;
+  padding: 0.4mm;
   vertical-align: middle;
   word-break: break-word;
 }
@@ -851,7 +857,17 @@ p {
   display: grid;
   grid-template-columns: 1.22fr 0.95fr;
   gap: 3mm;
-  align-items: start;
+  align-items: stretch;
+}
+
+.print-worker-panel {
+  display: grid;
+  align-content: start;
+}
+
+.risk-text-cell {
+  text-align: left;
+  padding-left: 1em;
 }
 
 .criteria-print-grid {
@@ -898,6 +914,10 @@ p {
   height: 6.9mm;
 }
 
+.worker-check-table tbody .center-cell {
+  font-size: 7.5px;
+}
+
 .number-cell,
 .center-cell {
   text-align: center;
@@ -929,15 +949,17 @@ p {
 }
 
 .risk-estimate-panel {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.7mm;
+  height: 100%;
   color: #ff0000;
 }
 
 .risk-estimate-panel h2 {
   margin: 0;
   color: #ff0000;
-  font-size: 8px;
+  font-size: 8.8px;
   line-height: 1.1;
   letter-spacing: 0;
 }
@@ -948,6 +970,7 @@ p {
   border-color: #111827;
   text-align: center;
   font-weight: 700;
+  font-size: 8.2px;
 }
 
 .risk-estimate-panel .print-table th {
@@ -991,15 +1014,34 @@ p {
 }
 
 .pre-work-print-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  margin-top: 4.5mm;
   color: #111827;
 }
 
 .pre-work-print-panel h2 {
   margin: 0 0 0.4mm;
   color: #111827;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.1;
   letter-spacing: 0;
+}
+
+.pre-work-print-table {
+  height: 100%;
+}
+
+.pre-work-print-panel .print-table th,
+.pre-work-print-panel .print-table td {
+  color: #111827;
+  font-size: 8.5px;
+}
+
+.pre-work-print-table th {
+  height: 5.6mm;
 }
 
 .pre-work-print-table th:nth-child(1),
@@ -1013,7 +1055,7 @@ p {
 }
 
 .pre-work-print-table tbody td {
-  height: 4.4mm;
+  height: 8mm;
   color: #111827;
   font-weight: 400;
   text-align: left;
@@ -1078,7 +1120,7 @@ p {
     width: auto;
     min-height: auto;
     margin: 0;
-    padding: 0;
+    padding: 1.5mm 2mm;
     box-shadow: none;
     page-break-after: always;
   }

@@ -151,7 +151,7 @@ export function KyPrintPreviewPage() {
         <section className="print-basic-grid">
           <PrintField label="工事名" value={site?.name ?? ''} />
           <PrintField label="会社名" value={company?.name ?? ''} />
-          <PrintField label="実施日" value={kyRecord.workDate} />
+          <PrintField label="実施日" value={formatJapaneseDate(kyRecord.workDate)} />
           <PrintField emptyText="" label="天候" value={kyRecord.weather.trim()} />
         </section>
 
@@ -179,7 +179,7 @@ export function KyPrintPreviewPage() {
         </section>
 
         <section className="print-bottom-grid">
-          <div>
+          <div className="print-worker-panel">
             <h2 className="print-section-title">
               参加者・健康状態チェック（本人記入）
             </h2>
@@ -202,7 +202,7 @@ export function KyPrintPreviewPage() {
               <h1>参加者・健康状態チェック 続き</h1>
               <p>
                 工事名：{site?.name || '未設定'} / 会社名：
-                {company?.name || '未設定'} / 実施日：{kyRecord.workDate}
+                {company?.name || '未設定'} / 実施日：{formatJapaneseDate(kyRecord.workDate)}
               </p>
             </div>
           </header>
@@ -249,7 +249,7 @@ function PrintField({
   return (
     <div className="print-field">
       <span>{label}</span>
-      <strong>{value || emptyText}</strong>
+      <strong className="print-input-value">{value || emptyText}</strong>
     </div>
   )
 }
@@ -263,8 +263,8 @@ function RiskRow({ workItem }: { workItem: KyRecordWorkItem }) {
   return (
     <tr>
       <td className="number-cell">{workItem.order}</td>
-      <td>{workItem.workDescription}</td>
-      <td>{workItem.riskPoint}</td>
+      <td className="risk-text-cell">{workItem.workDescription}</td>
+      <td className="risk-text-cell">{workItem.riskPoint}</td>
       <td className="center-cell">
         {hasWorkItem ? `${workItem.possibility}` : ''}
       </td>
@@ -273,7 +273,7 @@ function RiskRow({ workItem }: { workItem: KyRecordWorkItem }) {
         {hasWorkItem ? `${workItem.riskScore}` : ''}
       </td>
       <td className="center-cell">{hasWorkItem ? workItem.riskLevel : ''}</td>
-      <td>{workItem.countermeasures}</td>
+      <td className="risk-text-cell">{workItem.countermeasures}</td>
     </tr>
   )
 }
@@ -417,7 +417,34 @@ function isPreWorkCheckedForAll(
   workerChecks: WorkerCheck[],
   key: (typeof preWorkCheckItems)[number]['key'],
 ) {
-  return workerChecks.length > 0 && workerChecks.every((workerCheck) => workerCheck.preWorkChecks[key])
+  return (
+    workerChecks.length > 0 &&
+    workerChecks.every((workerCheck) => workerCheck.preWorkChecks[key])
+  )
+}
+
+function formatJapaneseDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+
+  if (!match) {
+    return ''
+  }
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const date = new Date(year, month - 1, day)
+
+  if (
+    !year ||
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return ''
+  }
+
+  return `${year}年 ${month}月 ${day}日`
 }
 
 function WorkerChecksTable({
