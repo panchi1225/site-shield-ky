@@ -6,7 +6,7 @@ import { useSite } from '../hooks/useSite'
 import { useWorkerChecks } from '../hooks/useWorkerChecks'
 import type { KyRecordWorkItem } from '../types/kyRecord'
 import type { MedicationStatus, WorkerCheck } from '../types/workerCheck'
-import { createEmptyWorkItem } from '../utils/kyRecord'
+import { createEmptyWorkItem, maxWorkItems } from '../utils/kyRecord'
 
 const rowsPerSignaturePage = 15
 
@@ -216,7 +216,7 @@ export function KyPrintPreviewPage() {
 }
 
 function makeFixedWorkItems(workItems: KyRecordWorkItem[]) {
-  return Array.from({ length: 5 }, (_, index) => {
+  return Array.from({ length: maxWorkItems }, (_, index) => {
     return (
       workItems[index] ?? {
         ...createEmptyWorkItem(index + 1),

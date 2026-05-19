@@ -235,7 +235,7 @@ export function KyEditPage() {
         <p className="eyebrow">KY編集</p>
         <h1>{getPrimaryWorkName(kyRecord)} を編集します</h1>
         <p className="lead">
-          Excel様式に合わせたKY項目を編集します。作業内容は最大5件までです。
+          Excel様式に合わせたKY項目を編集します。作業内容は最大4件までです。
         </p>
         <div className="actions">
           <BackToKyDetailLink
@@ -286,7 +286,7 @@ export function KyEditPage() {
         </button>
 
         {formState.workItems.length >= maxWorkItems ? (
-          <p>作業内容は最大5件までです。</p>
+          <p>作業内容は最大4件までです。</p>
         ) : null}
 
         {submitError ? (

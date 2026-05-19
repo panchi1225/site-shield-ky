@@ -5,7 +5,7 @@ import type {
   KyRecordWorkItem,
 } from '../types/kyRecord'
 
-export const maxWorkItems = 5
+export const maxWorkItems = 4
 
 export const possibilityOptions = [
   { value: 1, label: 'ほとんど起こらない' },

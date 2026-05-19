@@ -215,7 +215,7 @@ export function KyCreatePage() {
         <p className="eyebrow">KY作成</p>
         <h1>{company.name || '会社名未設定'} のKY下書きを作成します。</h1>
         <p className="lead">
-          Excel様式に合わせて、1日のKYを1枚作成します。作業項目は最大5件まで登録できます。
+          Excel様式に合わせて、1日のKYを1枚作成します。作業項目は最大4件まで登録できます。
         </p>
         <div className="actions">
           <BackToCompanyLink companyId={companyId} siteId={siteId} />
@@ -267,7 +267,7 @@ export function KyCreatePage() {
         </button>
 
         {formState.workItems.length >= maxWorkItems ? (
-          <p>作業項目は最大5件までです。</p>
+          <p>作業項目は最大4件までです。</p>
         ) : null}
 
         {submitError ? (
