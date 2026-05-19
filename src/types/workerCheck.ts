@@ -8,6 +8,17 @@ export type MedicationStatus = 'taken' | 'forgot' | 'none'
 
 export type SubmittedByAuthType = 'anonymous' | 'password' | 'unknown'
 
+export type PreWorkChecks = {
+  properClothing: boolean
+  qualifiedPersonnel: boolean
+  understandsRisksAndMeasures: boolean
+  understandsProcedure: boolean
+  signalCoordination: boolean
+  commandSystem: boolean
+}
+
+export type PreWorkCheckKey = keyof PreWorkChecks
+
 export type WorkerCheck = {
   id: string
   temperatureC: number | null
@@ -16,6 +27,7 @@ export type WorkerCheck = {
   medicationStatus: MedicationStatus
   medicationNote: string
   healthNote: string
+  preWorkChecks: PreWorkChecks
   signatureFormat: 'svg'
   signatureData: string
   submittedByUid: string

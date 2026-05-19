@@ -16,6 +16,7 @@ import type { SignatureSession } from '../types/signatureSession'
 import type {
   HealthChecks,
   MedicationStatus,
+  PreWorkChecks,
   SubmittedByAuthType,
 } from '../types/workerCheck'
 import {
@@ -29,6 +30,11 @@ import {
   hasSignature,
   type SignatureStroke,
 } from '../utils/signatureSvg'
+import {
+  areAllPreWorkChecksDone,
+  initialPreWorkChecks,
+  preWorkCheckItems,
+} from '../utils/preWorkChecks'
 
 const signatureWidth = 640
 const signatureHeight = 220
@@ -133,6 +139,8 @@ export function SignPage() {
   const [alcoholMg, setAlcoholMg] = useState('0')
   const [healthChecks, setHealthChecks] =
     useState<HealthChecks>(initialHealthChecks)
+  const [preWorkChecks, setPreWorkChecks] =
+    useState<PreWorkChecks>(initialPreWorkChecks)
   const [medicationStatus, setMedicationStatus] =
     useState<MedicationStatus>('none')
   const [medicationNote, setMedicationNote] = useState('')
@@ -307,6 +315,7 @@ export function SignPage() {
     setTemperatureC('')
     setAlcoholMg('0')
     setHealthChecks(initialHealthChecks)
+    setPreWorkChecks(initialPreWorkChecks)
     setMedicationStatus('none')
     setMedicationNote('')
     setHealthNote('')
@@ -315,6 +324,10 @@ export function SignPage() {
 
   function updateHealthCheck(field: keyof HealthChecks, value: boolean) {
     setHealthChecks((current) => ({ ...current, [field]: value }))
+  }
+
+  function updatePreWorkCheck(field: keyof PreWorkChecks, value: boolean) {
+    setPreWorkChecks((current) => ({ ...current, [field]: value }))
   }
 
   async function getSubmitter() {
@@ -341,6 +354,11 @@ export function SignPage() {
 
     if (medicationStatus === 'taken' && medicationNote.trim().length === 0) {
       setSubmitError('服薬している場合は、服薬内容を入力してください。')
+      return
+    }
+
+    if (!areAllPreWorkChecksDone(preWorkChecks)) {
+      setSubmitError('作業前の確認事項をすべて確認してください。')
       return
     }
 
@@ -377,6 +395,7 @@ export function SignPage() {
         medicationStatus,
         medicationNote: medicationNote.trim(),
         healthNote: healthNote.trim(),
+        preWorkChecks,
         signatureFormat: 'svg',
         signatureData,
         submittedByUid: submitter.uid,
@@ -608,6 +627,18 @@ export function SignPage() {
               value={healthNote}
             />
           </label>
+
+          <fieldset className="check-fieldset">
+            <legend>作業前の確認事項</legend>
+            {preWorkCheckItems.map((item) => (
+              <HealthCheckLabel
+                checked={preWorkChecks[item.key]}
+                key={item.key}
+                label={item.label}
+                onChange={(value) => updatePreWorkCheck(item.key, value)}
+              />
+            ))}
+          </fieldset>
 
           <div className="signature-pad-field">
             <div className="work-item-header">

@@ -4,6 +4,7 @@ import { db } from '../lib/firebase'
 import type {
   HealthChecks,
   MedicationStatus,
+  PreWorkChecks,
   SubmittedByAuthType,
   WorkerCheck,
 } from '../types/workerCheck'
@@ -53,6 +54,30 @@ function toSubmittedByAuthType(value: unknown): SubmittedByAuthType {
     : 'unknown'
 }
 
+function toPreWorkChecks(value: unknown): PreWorkChecks {
+  if (!value || typeof value !== 'object') {
+    return {
+      properClothing: false,
+      qualifiedPersonnel: false,
+      understandsRisksAndMeasures: false,
+      understandsProcedure: false,
+      signalCoordination: false,
+      commandSystem: false,
+    }
+  }
+
+  const data = value as Record<string, unknown>
+
+  return {
+    properClothing: data.properClothing === true,
+    qualifiedPersonnel: data.qualifiedPersonnel === true,
+    understandsRisksAndMeasures: data.understandsRisksAndMeasures === true,
+    understandsProcedure: data.understandsProcedure === true,
+    signalCoordination: data.signalCoordination === true,
+    commandSystem: data.commandSystem === true,
+  }
+}
+
 function toWorkerCheck(id: string, data: Record<string, unknown>): WorkerCheck {
   return {
     id,
@@ -63,6 +88,7 @@ function toWorkerCheck(id: string, data: Record<string, unknown>): WorkerCheck {
     medicationNote:
       typeof data.medicationNote === 'string' ? data.medicationNote : '',
     healthNote: typeof data.healthNote === 'string' ? data.healthNote : '',
+    preWorkChecks: toPreWorkChecks(data.preWorkChecks),
     signatureFormat: 'svg',
     signatureData:
       typeof data.signatureData === 'string' ? data.signatureData : '',

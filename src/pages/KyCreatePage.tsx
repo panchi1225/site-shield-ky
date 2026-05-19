@@ -16,6 +16,11 @@ import {
   riskLevelDescriptions,
   severityOptions,
 } from '../utils/kyRecord'
+import {
+  resolveWeatherValue,
+  weatherOptions,
+  type WeatherOptionValue,
+} from '../utils/weather'
 
 const initialFormState: KyRecordDraftInput = {
   workDate: new Date().toISOString().slice(0, 10),
@@ -34,6 +39,8 @@ export function KyCreatePage() {
   )
   const [formState, setFormState] =
     useState<KyRecordDraftInput>(initialFormState)
+  const [weatherOption, setWeatherOption] = useState<WeatherOptionValue>('')
+  const [weatherOther, setWeatherOther] = useState('')
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -96,9 +103,15 @@ export function KyCreatePage() {
     }
 
     const workItems = normalizeWorkItems(formState.workItems)
+    const weather = resolveWeatherValue(weatherOption, weatherOther)
 
     if (workItems.length < 1) {
       setSubmitError('作業項目は最低1件必要です。')
+      return
+    }
+
+    if (weatherOption === 'その他' && !weather) {
+      setSubmitError('天候で「その他」を選択した場合は内容を入力してください。')
       return
     }
 
@@ -122,7 +135,7 @@ export function KyCreatePage() {
         siteId,
         companyId,
         workDate: formState.workDate,
-        weather: formState.weather.trim(),
+        weather,
         status: 'draft',
         workItems,
         createdBy: user.uid,
@@ -233,14 +246,12 @@ export function KyCreatePage() {
           />
         </label>
 
-        <label>
-          <span>天候</span>
-          <input
-            onChange={(event) => updateFormField('weather', event.target.value)}
-            type="text"
-            value={formState.weather}
-          />
-        </label>
+        <WeatherInput
+          onOtherChange={setWeatherOther}
+          onWeatherChange={setWeatherOption}
+          otherValue={weatherOther}
+          value={weatherOption}
+        />
 
         <RiskCriteriaPanel />
 
@@ -412,6 +423,50 @@ function RiskCriteriaPanel() {
         </div>
       </div>
     </section>
+  )
+}
+
+function WeatherInput({
+  onOtherChange,
+  onWeatherChange,
+  otherValue,
+  value,
+}: {
+  onOtherChange: (value: string) => void
+  onWeatherChange: (value: WeatherOptionValue) => void
+  otherValue: string
+  value: WeatherOptionValue
+}) {
+  return (
+    <>
+      <label>
+        <span>天候</span>
+        <select
+          onChange={(event) =>
+            onWeatherChange(event.target.value as WeatherOptionValue)
+          }
+          value={value}
+        >
+          {weatherOptions.map((option) => (
+            <option key={option.label} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {value === 'その他' ? (
+        <label>
+          <span>天候 その他</span>
+          <input
+            onChange={(event) => onOtherChange(event.target.value)}
+            required
+            type="text"
+            value={otherValue}
+          />
+        </label>
+      ) : null}
+    </>
   )
 }
 

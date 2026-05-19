@@ -850,7 +850,7 @@ p {
 .print-bottom-grid {
   display: grid;
   grid-template-columns: 1.22fr 0.95fr;
-  gap: 4mm;
+  gap: 3mm;
   align-items: start;
 }
 
@@ -895,7 +895,7 @@ p {
 }
 
 .worker-check-table tbody td {
-  height: 6.55mm;
+  height: 6.9mm;
 }
 
 .number-cell,
@@ -908,7 +908,7 @@ p {
 }
 
 .print-signature-box {
-  height: 5.95mm;
+  height: 6.3mm;
   overflow: hidden;
 }
 
@@ -930,7 +930,7 @@ p {
 
 .risk-estimate-panel {
   display: grid;
-  gap: 0.9mm;
+  gap: 0.7mm;
   color: #ff0000;
 }
 
@@ -968,7 +968,7 @@ p {
 }
 
 .risk-estimate-table tbody td {
-  height: 11.5mm;
+  height: 6.2mm;
 }
 
 .risk-estimate-table th:last-child,
@@ -987,7 +987,68 @@ p {
 }
 
 .risk-action-table tbody td {
-  height: 8.2mm;
+  height: 4.7mm;
+}
+
+.pre-work-print-panel {
+  color: #111827;
+}
+
+.pre-work-print-panel h2 {
+  margin: 0 0 0.4mm;
+  color: #111827;
+  font-size: 8px;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.pre-work-print-table th:nth-child(1),
+.pre-work-print-table td:nth-child(1) {
+  width: 8mm;
+}
+
+.pre-work-print-table th:nth-child(2),
+.pre-work-print-table td:nth-child(2) {
+  width: 13mm;
+}
+
+.pre-work-print-table tbody td {
+  height: 4.4mm;
+  color: #111827;
+  font-weight: 400;
+  text-align: left;
+}
+
+.pre-work-print-table .number-cell,
+.pre-work-print-table .center-cell {
+  text-align: center;
+  font-weight: 700;
+}
+
+.pre-work-review {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.pre-work-review h4 {
+  margin: 0;
+}
+
+.pre-work-review ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pre-work-review li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 8px;
 }
 
 @page {

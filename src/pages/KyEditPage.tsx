@@ -17,6 +17,12 @@ import {
   riskLevelDescriptions,
   severityOptions,
 } from '../utils/kyRecord'
+import {
+  getWeatherInputState,
+  resolveWeatherValue,
+  weatherOptions,
+  type WeatherOptionValue,
+} from '../utils/weather'
 
 const emptyFormState: KyRecordDraftInput = {
   workDate: '',
@@ -40,6 +46,8 @@ export function KyEditPage() {
   )
   const [formState, setFormState] =
     useState<KyRecordDraftInput>(emptyFormState)
+  const [weatherOption, setWeatherOption] = useState<WeatherOptionValue>('')
+  const [weatherOther, setWeatherOther] = useState('')
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -48,19 +56,16 @@ export function KyEditPage() {
       return
     }
 
+    const weatherState = getWeatherInputState(kyRecord.weather)
+
+    setWeatherOption(weatherState.option)
+    setWeatherOther(weatherState.otherValue)
     setFormState({
       workDate: kyRecord.workDate,
       weather: kyRecord.weather,
       workItems: normalizeWorkItems(kyRecord.workItems),
     })
   }, [kyRecord])
-
-  function updateFormField(
-    field: keyof Omit<KyRecordDraftInput, 'workItems'>,
-    value: string,
-  ) {
-    setFormState((current) => ({ ...current, [field]: value }))
-  }
 
   function updateWorkItem(
     index: number,
@@ -117,9 +122,15 @@ export function KyEditPage() {
     }
 
     const workItems = normalizeWorkItems(formState.workItems)
+    const weather = resolveWeatherValue(weatherOption, weatherOther)
 
     if (workItems.length < 1) {
       setSubmitError('作業内容は最低1件必要です。')
+      return
+    }
+
+    if (weatherOption === 'その他' && !weather) {
+      setSubmitError('天候で「その他」を選択した場合は内容を入力してください。')
       return
     }
 
@@ -128,7 +139,7 @@ export function KyEditPage() {
 
     try {
       await updateDoc(doc(db, 'kyRecords', kyRecordId), {
-        weather: formState.weather.trim(),
+        weather,
         workItems,
         updatedBy: user.uid,
         updatedAt: serverTimestamp(),
@@ -252,14 +263,12 @@ export function KyEditPage() {
           <input disabled required type="date" value={formState.workDate} />
         </label>
 
-        <label>
-          <span>天候</span>
-          <input
-            onChange={(event) => updateFormField('weather', event.target.value)}
-            type="text"
-            value={formState.weather}
-          />
-        </label>
+        <WeatherInput
+          onOtherChange={setWeatherOther}
+          onWeatherChange={setWeatherOption}
+          otherValue={weatherOther}
+          value={weatherOption}
+        />
 
         <RiskCriteriaPanel />
 
@@ -430,6 +439,50 @@ function RiskCriteriaPanel() {
         </div>
       </div>
     </section>
+  )
+}
+
+function WeatherInput({
+  onOtherChange,
+  onWeatherChange,
+  otherValue,
+  value,
+}: {
+  onOtherChange: (value: string) => void
+  onWeatherChange: (value: WeatherOptionValue) => void
+  otherValue: string
+  value: WeatherOptionValue
+}) {
+  return (
+    <>
+      <label>
+        <span>天候</span>
+        <select
+          onChange={(event) =>
+            onWeatherChange(event.target.value as WeatherOptionValue)
+          }
+          value={value}
+        >
+          {weatherOptions.map((option) => (
+            <option key={option.label} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {value === 'その他' ? (
+        <label>
+          <span>天候 その他</span>
+          <input
+            onChange={(event) => onOtherChange(event.target.value)}
+            required
+            type="text"
+            value={otherValue}
+          />
+        </label>
+      ) : null}
+    </>
   )
 }
 

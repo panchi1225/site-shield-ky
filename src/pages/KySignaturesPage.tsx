@@ -8,6 +8,7 @@ import { db } from '../lib/firebase'
 import type { KyRecordStatus } from '../types/kyRecord'
 import type { MedicationStatus, WorkerCheck } from '../types/workerCheck'
 import { getPrimaryWorkName } from '../utils/kyRecord'
+import { areAllPreWorkChecksDone, preWorkCheckItems } from '../utils/preWorkChecks'
 
 const kyStatusLabels: Record<KyRecordStatus, string> = {
   draft: '下書き',
@@ -287,6 +288,7 @@ function SignatureReviewCard({
   workerCheck: WorkerCheck
 }) {
   const healthOk = isHealthOk(workerCheck)
+  const preWorkOk = areAllPreWorkChecksDone(workerCheck.preWorkChecks)
   const signatureSvg = getDisplayableSignatureSvg(workerCheck)
 
   return (
@@ -337,10 +339,25 @@ function SignatureReviewCard({
         />
         <DetailRow label="体調メモ" value={workerCheck.healthNote || 'なし'} />
         <DetailRow
+          label="作業前確認"
+          value={preWorkOk ? '確認済み' : '要確認'}
+        />
+        <DetailRow
           label="登録日時"
           value={formatDateTime(workerCheck.createdAt)}
         />
       </ul>
+      <div className="pre-work-review">
+        <h4>作業前確認事項</h4>
+        <ul>
+          {preWorkCheckItems.map((item) => (
+            <li key={item.key}>
+              <span>{workerCheck.preWorkChecks[item.key] ? '○' : '×'}</span>
+              <span>{item.label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
       <div className="signature-preview">
         <h4>手書き署名</h4>
         {signatureSvg ? (

@@ -7,6 +7,7 @@ import { useWorkerChecks } from '../hooks/useWorkerChecks'
 import type { KyRecordWorkItem } from '../types/kyRecord'
 import type { MedicationStatus, WorkerCheck } from '../types/workerCheck'
 import { createEmptyWorkItem, maxWorkItems } from '../utils/kyRecord'
+import { preWorkCheckItems } from '../utils/preWorkChecks'
 
 const rowsPerSignaturePage = 15
 
@@ -151,7 +152,7 @@ export function KyPrintPreviewPage() {
           <PrintField label="工事名" value={site?.name ?? ''} />
           <PrintField label="会社名" value={company?.name ?? ''} />
           <PrintField label="実施日" value={kyRecord.workDate} />
-          <PrintField label="天候" value={kyRecord.weather} />
+          <PrintField emptyText="" label="天候" value={kyRecord.weather.trim()} />
         </section>
 
         <section>
@@ -187,7 +188,7 @@ export function KyPrintPreviewPage() {
               workerChecks={signaturePages[0] ?? []}
             />
           </div>
-          <RiskCriteriaPanel />
+          <RiskCriteriaPanel workerChecks={workerChecks} />
         </section>
       </article>
 
@@ -236,11 +237,19 @@ function chunkWorkerChecks(workerChecks: WorkerCheck[]) {
   return chunks.length > 0 ? chunks : [[]]
 }
 
-function PrintField({ label, value }: { label: string; value: string }) {
+function PrintField({
+  emptyText = '未設定',
+  label,
+  value,
+}: {
+  emptyText?: string
+  label: string
+  value: string
+}) {
   return (
     <div className="print-field">
       <span>{label}</span>
-      <strong>{value || '未設定'}</strong>
+      <strong>{value || emptyText}</strong>
     </div>
   )
 }
@@ -269,7 +278,7 @@ function RiskRow({ workItem }: { workItem: KyRecordWorkItem }) {
   )
 }
 
-function RiskCriteriaPanel() {
+function RiskCriteriaPanel({ workerChecks }: { workerChecks: WorkerCheck[] }) {
   return (
     <section className="risk-estimate-panel">
       <h2>◎危険度（リスクレベル）の見積もり</h2>
@@ -367,8 +376,48 @@ function RiskCriteriaPanel() {
           </tr>
         </tbody>
       </table>
+      <PreWorkCheckPrintTable workerChecks={workerChecks} />
     </section>
   )
+}
+
+function PreWorkCheckPrintTable({
+  workerChecks,
+}: {
+  workerChecks: WorkerCheck[]
+}) {
+  return (
+    <section className="pre-work-print-panel">
+      <h2>作業前の確認事項</h2>
+      <table className="print-table pre-work-print-table">
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>チェック</th>
+            <th>確認事項</th>
+          </tr>
+        </thead>
+        <tbody>
+          {preWorkCheckItems.map((item, index) => (
+            <tr key={item.key}>
+              <td className="number-cell">{index + 1}</td>
+              <td className="center-cell">
+                {isPreWorkCheckedForAll(workerChecks, item.key) ? '○' : ''}
+              </td>
+              <td>{item.label}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  )
+}
+
+function isPreWorkCheckedForAll(
+  workerChecks: WorkerCheck[],
+  key: (typeof preWorkCheckItems)[number]['key'],
+) {
+  return workerChecks.length > 0 && workerChecks.every((workerCheck) => workerCheck.preWorkChecks[key])
 }
 
 function WorkerChecksTable({
