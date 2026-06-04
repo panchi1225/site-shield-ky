@@ -487,13 +487,6 @@ p {
   overflow-x: hidden;
 }
 
-.public-site-view-page .print-sheet {
-  width: 100%;
-  max-width: 100%;
-  margin-inline: auto;
-  overflow: hidden;
-}
-
 .public-ky-list {
   display: grid;
   gap: 10px;
@@ -560,6 +553,16 @@ p {
 
 .public-print-loading {
   margin-top: 0;
+}
+
+.public-print-sheet-viewport {
+  width: 100%;
+  overflow: hidden;
+}
+
+.public-print-sheet-scale {
+  width: max-content;
+  transform-origin: top left;
 }
 
 .public-site-view-actions {
@@ -1459,12 +1462,6 @@ p {
   gap: 8px;
 }
 
-.public-site-view-page .print-sheet {
-  width: min(100%, 297mm);
-  max-width: 100%;
-  overflow: hidden;
-}
-
 @media (max-width: 900px) {
   .public-site-view-page {
     max-width: 100%;
@@ -1491,116 +1488,6 @@ p {
 
   .public-print-action-buttons .button-link {
     flex: 1 1 140px;
-  }
-
-  .public-site-view-page .print-sheet {
-    width: 100%;
-    min-height: auto;
-    gap: 5px;
-    padding: 10px;
-    font-size: 5.8px;
-  }
-
-  .public-site-view-page .print-title-row,
-  .public-site-view-page .print-continuation-header {
-    gap: 8px;
-  }
-
-  .public-site-view-page .print-title-row h1,
-  .public-site-view-page .print-continuation-header h1 {
-    font-size: 15px;
-  }
-
-  .public-site-view-page .prime-stamp-box {
-    width: 64px;
-    min-height: 42px;
-  }
-
-  .public-site-view-page .print-basic-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .public-site-view-page .print-field {
-    min-height: 24px;
-  }
-
-  .public-site-view-page .print-section-title {
-    font-size: 7px;
-  }
-
-  .public-site-view-page .print-table th,
-  .public-site-view-page .print-table td {
-    padding: 2px;
-  }
-
-  .public-site-view-page .risk-table th:nth-child(n),
-  .public-site-view-page .risk-table td:nth-child(n) {
-    width: auto;
-  }
-
-  .public-site-view-page .risk-table th:nth-child(1),
-  .public-site-view-page .risk-table td:nth-child(1),
-  .public-site-view-page .risk-table th:nth-child(4),
-  .public-site-view-page .risk-table td:nth-child(4),
-  .public-site-view-page .risk-table th:nth-child(5),
-  .public-site-view-page .risk-table td:nth-child(5),
-  .public-site-view-page .risk-table th:nth-child(6),
-  .public-site-view-page .risk-table td:nth-child(6),
-  .public-site-view-page .risk-table th:nth-child(7),
-  .public-site-view-page .risk-table td:nth-child(7) {
-    width: 8%;
-  }
-
-  .public-site-view-page .risk-table th:nth-child(2),
-  .public-site-view-page .risk-table td:nth-child(2),
-  .public-site-view-page .risk-table th:nth-child(3),
-  .public-site-view-page .risk-table td:nth-child(3),
-  .public-site-view-page .risk-table th:nth-child(8),
-  .public-site-view-page .risk-table td:nth-child(8) {
-    width: 20%;
-  }
-
-  .public-site-view-page .risk-table tbody td {
-    height: auto;
-    min-height: 26px;
-  }
-
-  .public-site-view-page .print-bottom-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .public-site-view-page .worker-check-table th:nth-child(n),
-  .public-site-view-page .worker-check-table td:nth-child(n) {
-    width: auto;
-  }
-
-  .public-site-view-page .worker-check-table tbody td {
-    height: 20px;
-  }
-
-  .public-site-view-page .print-signature-box {
-    height: 18px;
-  }
-
-  .public-site-view-page .risk-estimate-top {
-    grid-template-columns: 1fr;
-    gap: 4px;
-  }
-
-  .public-site-view-page .risk-estimate-times {
-    font-size: 10px;
-  }
-
-  .public-site-view-page .risk-estimate-panel h2 {
-    font-size: 7px;
-  }
-
-  .public-site-view-page .risk-estimate-panel .print-table th,
-  .public-site-view-page .risk-estimate-panel .print-table td,
-  .public-site-view-page .pre-work-print-panel .print-table th,
-  .public-site-view-page .pre-work-print-panel .print-table td {
-    font-size: 6px;
   }
 }
 
@@ -1638,6 +1525,16 @@ p {
 
   .public-print-preview {
     display: block;
+  }
+
+  .public-print-sheet-viewport {
+    height: auto !important;
+    overflow: visible;
+  }
+
+  .public-print-sheet-scale {
+    width: auto;
+    transform: none !important;
   }
 
   .print-sheet {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   Timestamp,
@@ -316,6 +316,58 @@ function PublicKyPrintPreview({
   siteName: string
   summary: PublicKySummary
 }) {
+  const viewportRef = useRef<HTMLDivElement | null>(null)
+  const sheetScaleRef = useRef<HTMLDivElement | null>(null)
+  const [sheetPreview, setSheetPreview] = useState({
+    height: 0,
+    scale: 1,
+  })
+
+  useEffect(() => {
+    const viewportElement = viewportRef.current
+    const sheetElement = sheetScaleRef.current
+
+    if (!viewportElement || !sheetElement) {
+      return
+    }
+
+    const viewport = viewportElement
+    const sheet = sheetElement
+
+    function updateSheetPreview() {
+      const viewportWidth = viewport.clientWidth
+      const sheetWidth = sheet.scrollWidth
+      const sheetHeight = sheet.scrollHeight
+
+      if (!viewportWidth || !sheetWidth || !sheetHeight) {
+        return
+      }
+
+      const nextScale = Math.min(1, viewportWidth / sheetWidth)
+      setSheetPreview({
+        height: Math.ceil(sheetHeight * nextScale),
+        scale: nextScale,
+      })
+    }
+
+    updateSheetPreview()
+
+    const resizeObserver = new ResizeObserver(updateSheetPreview)
+    resizeObserver.observe(viewport)
+    resizeObserver.observe(sheet)
+    window.addEventListener('resize', updateSheetPreview)
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', updateSheetPreview)
+    }
+  }, [
+    participantState.errorMessage,
+    participantState.isLoading,
+    participantState.participantChecks.length,
+    summary.id,
+  ])
+
   return (
     <section className="public-print-preview">
       <div className="public-print-actions print-actions">
@@ -353,15 +405,32 @@ function PublicKyPrintPreview({
       ) : null}
 
       {!participantState.isLoading && !participantState.errorMessage ? (
-        <KyPrintSheet
-          companyName={summary.companyName}
-          participantChecks={participantState.participantChecks}
-          primeContractorStamps={summary.primeContractorStamps}
-          siteName={siteName}
-          weather={summary.weather}
-          workDate={summary.workDate}
-          workItems={summary.workItems}
-        />
+        <div
+          className="public-print-sheet-viewport"
+          ref={viewportRef}
+          style={{ height: sheetPreview.height || undefined }}
+        >
+          <div
+            className="public-print-sheet-scale"
+            ref={sheetScaleRef}
+            style={{
+              transform:
+                sheetPreview.scale < 1
+                  ? `scale(${sheetPreview.scale})`
+                  : undefined,
+            }}
+          >
+            <KyPrintSheet
+              companyName={summary.companyName}
+              participantChecks={participantState.participantChecks}
+              primeContractorStamps={summary.primeContractorStamps}
+              siteName={siteName}
+              weather={summary.weather}
+              workDate={summary.workDate}
+              workItems={summary.workItems}
+            />
+          </div>
+        </div>
       ) : null}
     </section>
   )
