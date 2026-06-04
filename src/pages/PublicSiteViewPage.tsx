@@ -56,7 +56,6 @@ export function PublicSiteViewPage() {
   const today = useMemo(() => getTodayWorkDate(), [])
   const selectedKySummary =
     state.kySummaries.find((summary) => summary.id === selectedKyRecordId) ??
-    state.kySummaries[0] ??
     null
 
   useEffect(() => {
@@ -127,7 +126,7 @@ export function PublicSiteViewPage() {
           siteView,
           kySummaries,
         })
-        setSelectedKyRecordId(kySummaries[0]?.id ?? '')
+        setSelectedKyRecordId('')
       } catch (error) {
         if (!isActive) {
           return
@@ -256,40 +255,47 @@ export function PublicSiteViewPage() {
       <div className="page-header">
         <p className="eyebrow">現場掲示用閲覧ページ</p>
         <h1>{state.siteView?.siteName || '現場名未設定'}</h1>
-        <p className="lead">本日のKY一覧: {formatJapaneseDate(today)}</p>
+        <p className="lead">
+          本日のKY登録会社一覧: {formatJapaneseDate(today)}
+        </p>
       </div>
 
-      <section className="status-panel public-ky-list-panel">
-        <h2>本日のKY一覧</h2>
-        {state.kySummaries.length === 0 ? (
-          <p>本日公開されているKYはありません。</p>
-        ) : (
-          <div className="public-ky-list">
-            {state.kySummaries.map((summary) => (
-              <button
-                className={
-                  summary.id === selectedKySummary?.id
-                    ? 'public-ky-item selected'
-                    : 'public-ky-item'
-                }
-                key={summary.id}
-                onClick={() => setSelectedKyRecordId(summary.id)}
-                type="button"
-              >
-                <strong>{summary.companyName || '会社名未設定'}</strong>
-                <span>{summary.representativeWorkDescription || '作業内容未設定'}</span>
-                <span className="status-badge">
-                  {publicStatusLabels[summary.status]}
-                </span>
-                <span>{summary.participantCount}名署名</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
+      {!selectedKySummary ? (
+        <section className="status-panel public-ky-list-panel">
+          <h2>本日のKY登録会社一覧</h2>
+          {state.kySummaries.length === 0 ? (
+            <p>本日公開されているKYはありません。</p>
+          ) : (
+            <div className="public-ky-list">
+              {state.kySummaries.map((summary) => (
+                <button
+                  className={
+                    summary.id === selectedKyRecordId
+                      ? 'public-ky-item selected'
+                      : 'public-ky-item'
+                  }
+                  key={summary.id}
+                  onClick={() => setSelectedKyRecordId(summary.id)}
+                  type="button"
+                >
+                  <strong>{summary.companyName || '会社名未設定'}</strong>
+                  <span>
+                    {summary.representativeWorkDescription || '作業内容未設定'}
+                  </span>
+                  <span className="status-badge">
+                    {publicStatusLabels[summary.status]}
+                  </span>
+                  <span>{summary.participantCount}名署名</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
 
       {selectedKySummary ? (
         <PublicKyPrintPreview
+          onBack={() => setSelectedKyRecordId('')}
           participantState={participantState}
           siteName={state.siteView?.siteName ?? ''}
           summary={selectedKySummary}
@@ -300,10 +306,12 @@ export function PublicSiteViewPage() {
 }
 
 function PublicKyPrintPreview({
+  onBack,
   participantState,
   siteName,
   summary,
 }: {
+  onBack: () => void
   participantState: ParticipantChecksState
   siteName: string
   summary: PublicKySummary
@@ -318,13 +326,18 @@ function PublicKyPrintPreview({
             {publicStatusLabels[summary.status]}
           </p>
         </div>
-        <button
-          className="button-link primary"
-          onClick={() => window.print()}
-          type="button"
-        >
-          印刷
-        </button>
+        <div className="public-print-action-buttons">
+          <button className="button-link" onClick={onBack} type="button">
+            一覧に戻る
+          </button>
+          <button
+            className="button-link primary"
+            onClick={() => window.print()}
+            type="button"
+          >
+            印刷
+          </button>
+        </div>
       </div>
 
       {participantState.isLoading ? (
