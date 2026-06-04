@@ -143,9 +143,11 @@ export function KyPrintPreviewPage() {
           <div>
             <h1>リスクアセスメントKY活動表</h1>
           </div>
-          <div className="prime-stamp-box">
-            <span>元請確認欄</span>
-          </div>
+          <PrimeStampBox
+            stampText={kyRecord.stampText}
+            stampedAt={kyRecord.stampedAt}
+            stampedByName={kyRecord.stampedByName}
+          />
         </header>
 
         <section className="print-basic-grid">
@@ -250,6 +252,32 @@ function PrintField({
     <div className="print-field">
       <span>{label}</span>
       <strong className="print-input-value">{value || emptyText}</strong>
+    </div>
+  )
+}
+
+function PrimeStampBox({
+  stampText,
+  stampedAt,
+  stampedByName,
+}: {
+  stampText: string
+  stampedAt: Date | null
+  stampedByName: string
+}) {
+  const hasStamp = Boolean(stampText || stampedByName || stampedAt)
+
+  return (
+    <div className={`prime-stamp-box ${hasStamp ? 'stamped' : ''}`}>
+      {hasStamp ? (
+        <div className="prime-stamp-mark">
+          <strong>{stampText || '確認'}</strong>
+          <span>{stampedByName}</span>
+          <time>{formatJapaneseDateFromDate(stampedAt)}</time>
+        </div>
+      ) : (
+        <span>元請確認欄</span>
+      )}
     </div>
   )
 }
@@ -445,6 +473,14 @@ function formatJapaneseDate(value: string) {
   }
 
   return `${year}年 ${month}月 ${day}日`
+}
+
+function formatJapaneseDateFromDate(value: Date | null) {
+  if (!value) {
+    return ''
+  }
+
+  return `${value.getFullYear()}年 ${value.getMonth() + 1}月 ${value.getDate()}日`
 }
 
 function WorkerChecksTable({

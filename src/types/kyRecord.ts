@@ -41,5 +41,7 @@ export type KyRecord = {
   registeredBy: string | null
   registeredAt: Date | null
   stampedBy: string | null
+  stampedByName: string
   stampedAt: Date | null
+  stampText: string
 }

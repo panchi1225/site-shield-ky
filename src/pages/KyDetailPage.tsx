@@ -38,6 +38,7 @@ export function KyDetailPage() {
   const [reloadKey, setReloadKey] = useState(0)
   const [actionError, setActionError] = useState('')
   const [isOpeningSignature, setIsOpeningSignature] = useState(false)
+  const [isStamping, setIsStamping] = useState(false)
   const [isCreatingSignatureSession, setIsCreatingSignatureSession] =
     useState(false)
   const { errorMessage, isLoading, isMissing, kyRecord } = useKyRecord(
@@ -166,6 +167,51 @@ export function KyDetailPage() {
     }
   }
 
+  async function handleStampKy() {
+    if (!user || !appUser || !kyRecord) {
+      setActionError('元請確認に必要なログイン情報が不足しています。')
+      return
+    }
+
+    if (kyRecord.status !== 'registered') {
+      setActionError('登録済みのKYだけ元請確認できます。')
+      return
+    }
+
+    const shouldStamp = window.confirm(
+      'このKYを元請確認済みにします。押印後も追加署名は受け付けできます。よろしいですか？',
+    )
+
+    if (!shouldStamp) {
+      return
+    }
+
+    setActionError('')
+    setIsStamping(true)
+
+    try {
+      await updateDoc(doc(db, 'kyRecords', kyRecord.id), {
+        status: 'stamped',
+        stampedBy: user.uid,
+        stampedByName: getStampDisplayName(appUser.displayName, appUser.email, user.email),
+        stampedAt: serverTimestamp(),
+        stampText: '確認',
+        updatedBy: user.uid,
+        updatedAt: serverTimestamp(),
+      })
+
+      setReloadKey((current) => current + 1)
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : '元請確認の保存に失敗しました。',
+      )
+    } finally {
+      setIsStamping(false)
+    }
+  }
+
   if (!canViewKyRecord) {
     return (
       <section className="page">
@@ -231,7 +277,7 @@ export function KyDetailPage() {
         <p className="eyebrow">KY詳細</p>
         <h1>{getPrimaryWorkName(kyRecord)}</h1>
         <p className="lead">
-          Excel様式に合わせたKY内容を表示します。PDF出力と元請確認欄は後で実装します。
+          Excel様式に合わせたKY内容を表示します。登録済みKYは元請確認できます。
         </p>
         <div className="actions">
           <BackToCompanyLink companyId={companyId} siteId={siteId} />
@@ -265,6 +311,19 @@ export function KyDetailPage() {
           >
             PDFプレビュー
           </Link>
+          {kyRecord.status === 'registered' ? (
+            <button
+              className="button-link primary"
+              disabled={isStamping}
+              onClick={handleStampKy}
+              type="button"
+            >
+              {isStamping ? '元請確認中...' : '元請確認する'}
+            </button>
+          ) : null}
+          {kyRecord.status === 'stamped' ? (
+            <span className="status-badge active">元請確認済み</span>
+          ) : null}
         </div>
       </div>
 
@@ -296,6 +355,8 @@ export function KyDetailPage() {
           <DetailRow label="作成日時" value={formatDateTime(kyRecord.createdAt)} />
           <DetailRow label="更新日時" value={formatDateTime(kyRecord.updatedAt)} />
           <DetailRow label="登録日時" value={formatDateTime(kyRecord.registeredAt)} />
+          <DetailRow label="元請確認者" value={kyRecord.stampedByName} />
+          <DetailRow label="元請確認日時" value={formatDateTime(kyRecord.stampedAt)} />
         </ul>
       </section>
 
@@ -312,7 +373,7 @@ export function KyDetailPage() {
 
       <section className="status-panel placeholder">
         <h2>後で実装する機能</h2>
-        <p>PDF出力、元請確認欄への電子印鑑、公開閲覧は後で実装します。</p>
+        <p>公開閲覧、現場掲示用QR、発注者向け閲覧画面は後で実装します。</p>
       </section>
     </section>
   )
@@ -462,6 +523,14 @@ function formatDateTime(value: Date | null) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(value)
+}
+
+function getStampDisplayName(
+  displayName: string,
+  appUserEmail: string,
+  authEmail: string | null,
+) {
+  return displayName || appUserEmail || authEmail || ''
 }
 
 function BackToCompanyLink({

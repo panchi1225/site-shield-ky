@@ -210,7 +210,10 @@ export function toKyRecord(
     registeredBy: toNullableString(data.registeredBy),
     registeredAt: toDate(data.registeredAt),
     stampedBy: toNullableString(data.stampedBy),
+    stampedByName:
+      typeof data.stampedByName === 'string' ? data.stampedByName : '',
     stampedAt: toDate(data.stampedAt),
+    stampText: typeof data.stampText === 'string' ? data.stampText : '',
   }
 }
 

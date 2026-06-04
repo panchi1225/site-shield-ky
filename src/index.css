@@ -748,11 +748,49 @@ p {
   width: 28mm;
   height: 14mm;
   display: grid;
-  place-items: start center;
+  place-items: center;
   border: 1px solid #111827;
   color: #111827;
   font-weight: 700;
+  padding: 1mm;
+}
+
+.prime-stamp-box:not(.stamped) {
+  place-items: start center;
   padding-top: 2mm;
+}
+
+.prime-stamp-box.stamped {
+  border-color: #b91c1c;
+}
+
+.prime-stamp-mark {
+  width: 22mm;
+  height: 11mm;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.3mm;
+  border: 1px solid #b91c1c;
+  border-radius: 999px;
+  color: #b91c1c;
+  line-height: 1;
+  text-align: center;
+}
+
+.prime-stamp-mark strong {
+  font-size: 10px;
+  letter-spacing: 0;
+}
+
+.prime-stamp-mark span,
+.prime-stamp-mark time {
+  max-width: 18mm;
+  font-size: 5.4px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .print-basic-grid {
