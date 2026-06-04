@@ -451,6 +451,14 @@ p {
   padding: 10px 12px;
 }
 
+.form-success {
+  border: 1px solid #a7f3d0;
+  border-radius: 6px;
+  background: #ecfdf5;
+  color: #065f46;
+  padding: 10px 12px;
+}
+
 .text-link {
   color: var(--primary-dark);
   font-weight: 700;
@@ -467,6 +475,115 @@ p {
 
 .signature-url {
   overflow-wrap: anywhere;
+}
+
+.public-site-view-panel {
+  border-left: 4px solid var(--primary);
+}
+
+.public-site-view-page {
+  max-width: 1120px;
+}
+
+.public-ky-list {
+  display: grid;
+  gap: 10px;
+}
+
+.public-ky-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(160px, 0.8fr) minmax(220px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.public-ky-item.selected,
+.public-ky-item:hover {
+  border-color: var(--primary);
+  background: #f0fdfa;
+}
+
+.public-ky-detail {
+  border-left: 4px solid var(--primary);
+}
+
+.public-work-item-list {
+  display: grid;
+  gap: 12px;
+}
+
+.public-work-item {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--surface-soft);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.public-work-item h3 {
+  margin: 0;
+}
+
+.public-work-item dl {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  margin: 0;
+  border-top: 1px solid var(--surface-soft);
+  border-left: 1px solid var(--surface-soft);
+}
+
+.public-work-item dt,
+.public-work-item dd {
+  margin: 0;
+  border-right: 1px solid var(--surface-soft);
+  border-bottom: 1px solid var(--surface-soft);
+  padding: 8px 10px;
+}
+
+.public-work-item dt {
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.public-stamp-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.public-stamp {
+  width: 92px;
+  min-height: 92px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  border: 2px solid #b91c1c;
+  border-radius: 999px;
+  color: #b91c1c;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.public-stamp strong {
+  font-size: 1.05rem;
+}
+
+.public-stamp span,
+.public-stamp time {
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .signature-review-list {

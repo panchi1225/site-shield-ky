@@ -16,6 +16,15 @@ function toSite(id: string, data: Record<string, unknown>): Site {
     address: typeof data.address === 'string' ? data.address : '',
     active: data.active === true,
     primeContractorStampOptions: [],
+    publicSiteViewToken:
+      typeof data.publicSiteViewToken === 'string'
+        ? data.publicSiteViewToken
+        : null,
+    publicSiteViewCreatedAt: null,
+    publicSiteViewCreatedBy:
+      typeof data.publicSiteViewCreatedBy === 'string'
+        ? data.publicSiteViewCreatedBy
+        : null,
   }
 }
 

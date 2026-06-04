@@ -1,8 +1,22 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import {
+  collection,
+  doc,
+  getDocs,
+  query,
+  serverTimestamp,
+  where,
+  writeBatch,
+} from 'firebase/firestore'
 import { useAuth } from '../auth/AuthContext'
 import { useCompanies } from '../hooks/useCompanies'
 import { useSite } from '../hooks/useSite'
+import { db } from '../lib/firebase'
 import type { Company } from '../types/company'
+import type { KyRecord } from '../types/kyRecord'
+import { getPrimaryWorkName, toKyRecord } from '../utils/kyRecord'
+import { createSiteViewToken, createSiteViewUrl } from '../utils/siteViewToken'
 
 const companyTypeLabels: Record<Company['type'], string> = {
   prime: '元請',
@@ -11,7 +25,7 @@ const companyTypeLabels: Record<Company['type'], string> = {
 
 export function SiteWorkspacePage() {
   const { siteId } = useParams()
-  const { appUser } = useAuth()
+  const { appUser, user } = useAuth()
   const canViewSite = appUser?.role === 'admin'
   const { errorMessage, isLoading, isMissing, site } = useSite(
     siteId,
@@ -108,6 +122,13 @@ export function SiteWorkspacePage() {
 
       <AdminCompaniesPanel siteId={site.id} />
 
+      <PublicSiteViewPanel
+        createdToken={site.publicSiteViewToken}
+        siteId={site.id}
+        siteName={site.name}
+        userId={user?.uid ?? ''}
+      />
+
       <div className="workspace-grid">
         <section className="status-panel placeholder">
           <h2>KY作成・閲覧・印刷</h2>
@@ -126,6 +147,226 @@ export function SiteWorkspacePage() {
       </div>
     </section>
   )
+}
+
+function PublicSiteViewPanel({
+  createdToken,
+  siteId,
+  siteName,
+  userId,
+}: {
+  createdToken: string | null
+  siteId: string
+  siteName: string
+  userId: string
+}) {
+  const [siteViewToken, setSiteViewToken] = useState(createdToken ?? '')
+  const [isCreating, setIsCreating] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [message, setMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+  const siteViewUrl = siteViewToken ? createSiteViewUrl(siteViewToken) : ''
+
+  async function handleCreateSiteView() {
+    if (!userId) {
+      setErrorMessage('現場掲示用URLの作成にはログイン情報が必要です。')
+      return
+    }
+
+    if (siteViewToken) {
+      return
+    }
+
+    const token = createSiteViewToken()
+    setIsCreating(true)
+    setErrorMessage('')
+    setMessage('')
+
+    try {
+      const batch = writeBatch(db)
+      batch.set(doc(db, 'publicSiteViews', token), {
+        siteId,
+        siteName,
+        active: true,
+        createdBy: userId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+      batch.update(doc(db, 'sites', siteId), {
+        publicSiteViewToken: token,
+        publicSiteViewCreatedAt: serverTimestamp(),
+        publicSiteViewCreatedBy: userId,
+        updatedAt: serverTimestamp(),
+      })
+      await batch.commit()
+
+      setSiteViewToken(token)
+      setMessage('現場掲示用URLを作成しました。')
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : '現場掲示用URLを作成できませんでした。',
+      )
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  async function handleSyncTodayKy() {
+    if (!siteViewToken) {
+      setErrorMessage('先に現場掲示用URLを作成してください。')
+      return
+    }
+
+    setIsSyncing(true)
+    setErrorMessage('')
+    setMessage('')
+
+    try {
+      const today = getTodayWorkDate()
+      const companiesSnapshot = await getDocs(
+        query(collection(db, 'companies'), where('siteId', '==', siteId)),
+      )
+      const companyMap = new Map<string, Company>()
+
+      companiesSnapshot.docs.forEach((companyDoc) => {
+        const data = companyDoc.data()
+        companyMap.set(companyDoc.id, {
+          id: companyDoc.id,
+          siteId: typeof data.siteId === 'string' ? data.siteId : '',
+          name: typeof data.name === 'string' ? data.name : '',
+          type: data.type === 'prime' ? 'prime' : 'subcontractor',
+          managerUserIds: Array.isArray(data.managerUserIds)
+            ? data.managerUserIds.filter(
+                (managerUserId): managerUserId is string =>
+                  typeof managerUserId === 'string',
+              )
+            : [],
+          active: data.active === true,
+        })
+      })
+
+      const kySnapshot = await getDocs(
+        query(
+          collection(db, 'kyRecords'),
+          where('siteId', '==', siteId),
+          where('workDate', '==', today),
+        ),
+      )
+      const publicKyRecords = kySnapshot.docs
+        .map((kyDoc) => toKyRecord(kyDoc.id, kyDoc.data()))
+        .filter((kyRecord) =>
+          kyRecord.status === 'registered' || kyRecord.status === 'stamped',
+        )
+
+      const batch = writeBatch(db)
+      publicKyRecords.forEach((kyRecord) => {
+        const company = companyMap.get(kyRecord.companyId)
+        batch.set(
+          doc(
+            db,
+            'publicSiteViews',
+            siteViewToken,
+            'kySummaries',
+            kyRecord.id,
+          ),
+          createPublicKySummary(kyRecord, company?.name ?? ''),
+        )
+      })
+      batch.set(
+        doc(db, 'publicSiteViews', siteViewToken),
+        {
+          siteId,
+          siteName,
+          active: true,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      )
+      await batch.commit()
+
+      setMessage(`本日の公開KYを${publicKyRecords.length}件更新しました。`)
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : '本日の公開KYを更新できませんでした。',
+      )
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  return (
+    <section className="status-panel public-site-view-panel">
+      <div className="section-heading">
+        <div>
+          <h2>現場掲示用URL</h2>
+          <p>
+            現場に掲示する閲覧用URLです。公開されるのは登録済み・元請確認済みKYだけです。
+          </p>
+        </div>
+      </div>
+
+      {siteViewUrl ? (
+        <div className="signature-url-box">
+          <a className="text-link signature-url" href={siteViewUrl}>
+            {siteViewUrl}
+          </a>
+          <button
+            className="button-link primary"
+            disabled={isSyncing}
+            onClick={handleSyncTodayKy}
+            type="button"
+          >
+            {isSyncing ? '更新中...' : '本日の公開KYを更新'}
+          </button>
+        </div>
+      ) : (
+        <button
+          className="button-link primary"
+          disabled={isCreating}
+          onClick={handleCreateSiteView}
+          type="button"
+        >
+          {isCreating ? '作成中...' : '現場掲示用URLを作成'}
+        </button>
+      )}
+
+      {message ? <p className="form-success">{message}</p> : null}
+      {errorMessage ? (
+        <p className="form-error" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
+function getTodayWorkDate() {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function createPublicKySummary(kyRecord: KyRecord, companyName: string) {
+  return {
+    kyRecordId: kyRecord.id,
+    siteId: kyRecord.siteId,
+    companyId: kyRecord.companyId,
+    companyName,
+    workDate: kyRecord.workDate,
+    weather: kyRecord.weather,
+    status: kyRecord.status,
+    representativeWorkDescription: getPrimaryWorkName(kyRecord),
+    workItems: kyRecord.workItems,
+    primeContractorStamps: kyRecord.primeContractorStamps,
+    updatedAt: serverTimestamp(),
+  }
 }
 
 function AdminCompaniesPanel({ siteId }: { siteId: string }) {

@@ -9,6 +9,7 @@ import { KyEditPage } from './pages/KyEditPage'
 import { KyPrintPreviewPage } from './pages/KyPrintPreviewPage'
 import { KySignaturesPage } from './pages/KySignaturesPage'
 import { LoginPage } from './pages/LoginPage'
+import { PublicSiteViewPage } from './pages/PublicSiteViewPage'
 import { SignPage } from './pages/SignPage'
 import { SiteWorkspacePage } from './pages/SiteWorkspacePage'
 import { ViewPage } from './pages/ViewPage'
@@ -102,6 +103,7 @@ function App() {
             }
           />
           <Route path="/sign/:token" element={<SignPage />} />
+          <Route path="/site-view/:siteViewToken" element={<PublicSiteViewPage />} />
           <Route path="/view/:token" element={<ViewPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

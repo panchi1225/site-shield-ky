@@ -9,4 +9,7 @@ export type Site = {
   address: string
   active: boolean
   primeContractorStampOptions: PrimeContractorStampOption[]
+  publicSiteViewToken: string | null
+  publicSiteViewCreatedAt: Date | null
+  publicSiteViewCreatedBy: string | null
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { doc, getDoc } from 'firebase/firestore'
+import { Timestamp, doc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import type { Site } from '../types/site'
 
@@ -45,6 +45,18 @@ function toSite(id: string, data: Record<string, unknown>): Site {
             ): option is { id: string; displayName: string } => option !== null,
           )
       : [],
+    publicSiteViewToken:
+      typeof data.publicSiteViewToken === 'string'
+        ? data.publicSiteViewToken
+        : null,
+    publicSiteViewCreatedAt:
+      data.publicSiteViewCreatedAt instanceof Timestamp
+        ? data.publicSiteViewCreatedAt.toDate()
+        : null,
+    publicSiteViewCreatedBy:
+      typeof data.publicSiteViewCreatedBy === 'string'
+        ? data.publicSiteViewCreatedBy
+        : null,
   }
 }
 
