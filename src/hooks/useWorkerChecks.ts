@@ -78,7 +78,7 @@ function toPreWorkChecks(value: unknown): PreWorkChecks {
   }
 }
 
-function toWorkerCheck(id: string, data: Record<string, unknown>): WorkerCheck {
+export function toWorkerCheck(id: string, data: Record<string, unknown>): WorkerCheck {
   return {
     id,
     temperatureC: toNullableNumber(data.temperatureC),

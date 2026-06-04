@@ -1,4 +1,9 @@
-import type { KyRecordStatus, KyRecordWorkItem, PrimeContractorStamp } from './kyRecord'
+import type {
+  KyRecordStatus,
+  KyRecordWorkItem,
+  PrimeContractorStamp,
+} from './kyRecord'
+import type { HealthChecks, MedicationStatus, PreWorkChecks } from './workerCheck'
 
 export type PublicKySummaryStatus = Extract<
   KyRecordStatus,
@@ -27,5 +32,20 @@ export type PublicKySummary = {
   representativeWorkDescription: string
   workItems: KyRecordWorkItem[]
   primeContractorStamps: PrimeContractorStamp[]
+  participantCount: number
   updatedAt: Date | null
+}
+
+export type PublicParticipantCheck = {
+  id: string
+  temperatureC: number | null
+  alcoholMg: number | null
+  healthChecks: HealthChecks
+  medicationStatus: MedicationStatus
+  medicationNote: string
+  healthNote: string
+  preWorkChecks: PreWorkChecks
+  signatureFormat: 'svg'
+  signatureData: string
+  createdAtText: string
 }

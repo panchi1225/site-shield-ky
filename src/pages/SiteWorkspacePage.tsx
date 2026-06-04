@@ -12,9 +12,11 @@ import {
 import { useAuth } from '../auth/AuthContext'
 import { useCompanies } from '../hooks/useCompanies'
 import { useSite } from '../hooks/useSite'
+import { toWorkerCheck } from '../hooks/useWorkerChecks'
 import { db } from '../lib/firebase'
 import type { Company } from '../types/company'
 import type { KyRecord } from '../types/kyRecord'
+import type { WorkerCheck } from '../types/workerCheck'
 import { getPrimaryWorkName, toKyRecord } from '../utils/kyRecord'
 import { createSiteViewToken, createSiteViewUrl } from '../utils/siteViewToken'
 
@@ -261,8 +263,13 @@ function PublicSiteViewPanel({
         )
 
       const batch = writeBatch(db)
-      publicKyRecords.forEach((kyRecord) => {
+
+      for (const kyRecord of publicKyRecords) {
         const company = companyMap.get(kyRecord.companyId)
+        const participantChecks = await loadWorkerChecksForPublicSync(
+          kyRecord.signatureSessionId,
+        )
+
         batch.set(
           doc(
             db,
@@ -271,9 +278,29 @@ function PublicSiteViewPanel({
             'kySummaries',
             kyRecord.id,
           ),
-          createPublicKySummary(kyRecord, company?.name ?? ''),
+          createPublicKySummary(
+            kyRecord,
+            company?.name ?? '',
+            participantChecks.length,
+          ),
         )
-      })
+
+        participantChecks.forEach((participantCheck) => {
+          batch.set(
+            doc(
+              db,
+              'publicSiteViews',
+              siteViewToken,
+              'kySummaries',
+              kyRecord.id,
+              'participantChecks',
+              participantCheck.id,
+            ),
+            createPublicParticipantCheck(participantCheck),
+          )
+        })
+      }
+
       batch.set(
         doc(db, 'publicSiteViews', siteViewToken),
         {
@@ -353,7 +380,32 @@ function getTodayWorkDate() {
   return `${year}-${month}-${day}`
 }
 
-function createPublicKySummary(kyRecord: KyRecord, companyName: string) {
+async function loadWorkerChecksForPublicSync(
+  signatureSessionId: string | null,
+) {
+  if (!signatureSessionId) {
+    return []
+  }
+
+  const snapshot = await getDocs(
+    collection(db, 'signatureSessions', signatureSessionId, 'workerChecks'),
+  )
+
+  return snapshot.docs
+    .map((workerCheckDoc) =>
+      toWorkerCheck(workerCheckDoc.id, workerCheckDoc.data()),
+    )
+    .sort(
+      (a, b) =>
+        (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0),
+    )
+}
+
+function createPublicKySummary(
+  kyRecord: KyRecord,
+  companyName: string,
+  participantCount: number,
+) {
   return {
     kyRecordId: kyRecord.id,
     siteId: kyRecord.siteId,
@@ -365,8 +417,44 @@ function createPublicKySummary(kyRecord: KyRecord, companyName: string) {
     representativeWorkDescription: getPrimaryWorkName(kyRecord),
     workItems: kyRecord.workItems,
     primeContractorStamps: kyRecord.primeContractorStamps,
+    participantCount,
     updatedAt: serverTimestamp(),
   }
+}
+
+function createPublicParticipantCheck(workerCheck: WorkerCheck) {
+  return {
+    signatureFormat: workerCheck.signatureFormat,
+    signatureData: workerCheck.signatureData,
+    temperatureC: workerCheck.temperatureC,
+    alcoholMg: workerCheck.alcoholMg,
+    healthChecks: {
+      conditionOk: workerCheck.healthChecks.conditionOk,
+      sleepOk: workerCheck.healthChecks.sleepOk,
+      breakfastOk: workerCheck.healthChecks.breakfastOk,
+    },
+    medicationStatus: workerCheck.medicationStatus,
+    medicationNote: workerCheck.medicationNote,
+    healthNote: workerCheck.healthNote,
+    preWorkChecks: {
+      properClothing: workerCheck.preWorkChecks.properClothing,
+      qualifiedPersonnel: workerCheck.preWorkChecks.qualifiedPersonnel,
+      understandsRisksAndMeasures:
+        workerCheck.preWorkChecks.understandsRisksAndMeasures,
+      understandsProcedure: workerCheck.preWorkChecks.understandsProcedure,
+      signalCoordination: workerCheck.preWorkChecks.signalCoordination,
+      commandSystem: workerCheck.preWorkChecks.commandSystem,
+    },
+    createdAtText: formatJapaneseDateText(workerCheck.createdAt),
+  }
+}
+
+function formatJapaneseDateText(value: Date | null) {
+  if (!value) {
+    return ''
+  }
+
+  return `${value.getFullYear()}年 ${value.getMonth() + 1}月 ${value.getDate()}日`
 }
 
 function AdminCompaniesPanel({ siteId }: { siteId: string }) {

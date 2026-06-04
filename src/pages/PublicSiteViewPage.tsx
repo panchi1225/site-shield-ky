@@ -9,13 +9,16 @@ import {
   query,
   where,
 } from 'firebase/firestore'
+import { KyPrintSheet } from '../components/KyPrintSheet'
 import { db } from '../lib/firebase'
 import type {
   PublicKySummary,
   PublicKySummaryStatus,
+  PublicParticipantCheck,
   PublicSiteView,
 } from '../types/publicSiteView'
 import type { KyRecordWorkItem, PrimeContractorStamp } from '../types/kyRecord'
+import type { MedicationStatus } from '../types/workerCheck'
 
 const publicStatusLabels: Record<PublicKySummaryStatus, string> = {
   registered: '登録済み',
@@ -29,6 +32,12 @@ type PublicSiteViewState = {
   kySummaries: PublicKySummary[]
 }
 
+type ParticipantChecksState = {
+  errorMessage: string
+  isLoading: boolean
+  participantChecks: PublicParticipantCheck[]
+}
+
 export function PublicSiteViewPage() {
   const { siteViewToken } = useParams()
   const [selectedKyRecordId, setSelectedKyRecordId] = useState('')
@@ -38,6 +47,12 @@ export function PublicSiteViewPage() {
     siteView: null,
     kySummaries: [],
   })
+  const [participantState, setParticipantState] =
+    useState<ParticipantChecksState>({
+      errorMessage: '',
+      isLoading: false,
+      participantChecks: [],
+    })
   const today = useMemo(() => getTodayWorkDate(), [])
   const selectedKySummary =
     state.kySummaries.find((summary) => summary.id === selectedKyRecordId) ??
@@ -147,6 +162,74 @@ export function PublicSiteViewPage() {
     }
   }, [siteViewToken, today])
 
+  useEffect(() => {
+    let isActive = true
+
+    async function loadParticipantChecks(currentToken: string, kyRecordId: string) {
+      setParticipantState({
+        errorMessage: '',
+        isLoading: true,
+        participantChecks: [],
+      })
+
+      try {
+        const snapshot = await getDocs(
+          collection(
+            db,
+            'publicSiteViews',
+            currentToken,
+            'kySummaries',
+            kyRecordId,
+            'participantChecks',
+          ),
+        )
+        const participantChecks = snapshot.docs
+          .map((participantDoc) =>
+            toPublicParticipantCheck(participantDoc.id, participantDoc.data()),
+          )
+          .sort((a, b) => a.id.localeCompare(b.id, 'ja'))
+
+        if (!isActive) {
+          return
+        }
+
+        setParticipantState({
+          errorMessage: '',
+          isLoading: false,
+          participantChecks,
+        })
+      } catch (error) {
+        if (!isActive) {
+          return
+        }
+
+        setParticipantState({
+          errorMessage:
+            error instanceof Error && error.message
+              ? '参加者情報を読み込めませんでした。'
+              : '参加者情報を読み込めませんでした。',
+          isLoading: false,
+          participantChecks: [],
+        })
+      }
+    }
+
+    if (!siteViewToken || !selectedKySummary) {
+      setParticipantState({
+        errorMessage: '',
+        isLoading: false,
+        participantChecks: [],
+      })
+      return
+    }
+
+    void loadParticipantChecks(siteViewToken, selectedKySummary.id)
+
+    return () => {
+      isActive = false
+    }
+  }, [selectedKySummary, siteViewToken])
+
   if (state.isLoading) {
     return (
       <section className="page public-site-view-page">
@@ -176,7 +259,7 @@ export function PublicSiteViewPage() {
         <p className="lead">本日のKY一覧: {formatJapaneseDate(today)}</p>
       </div>
 
-      <section className="status-panel">
+      <section className="status-panel public-ky-list-panel">
         <h2>本日のKY一覧</h2>
         {state.kySummaries.length === 0 ? (
           <p>本日公開されているKYはありません。</p>
@@ -198,98 +281,76 @@ export function PublicSiteViewPage() {
                 <span className="status-badge">
                   {publicStatusLabels[summary.status]}
                 </span>
+                <span>{summary.participantCount}名署名</span>
               </button>
             ))}
           </div>
         )}
       </section>
 
-      {selectedKySummary ? <PublicKyDetail summary={selectedKySummary} /> : null}
+      {selectedKySummary ? (
+        <PublicKyPrintPreview
+          participantState={participantState}
+          siteName={state.siteView?.siteName ?? ''}
+          summary={selectedKySummary}
+        />
+      ) : null}
     </section>
   )
 }
 
-function PublicKyDetail({ summary }: { summary: PublicKySummary }) {
+function PublicKyPrintPreview({
+  participantState,
+  siteName,
+  summary,
+}: {
+  participantState: ParticipantChecksState
+  siteName: string
+  summary: PublicKySummary
+}) {
   return (
-    <section className="status-panel public-ky-detail">
-      <div className="section-heading">
+    <section className="public-print-preview">
+      <div className="public-print-actions print-actions">
         <div>
           <h2>{summary.companyName || '会社名未設定'}</h2>
-          <p>{formatJapaneseDate(summary.workDate)}</p>
+          <p>
+            {formatJapaneseDate(summary.workDate)} /{' '}
+            {publicStatusLabels[summary.status]}
+          </p>
         </div>
-        <span className="status-badge active">
-          {publicStatusLabels[summary.status]}
-        </span>
+        <button
+          className="button-link primary"
+          onClick={() => window.print()}
+          type="button"
+        >
+          印刷
+        </button>
       </div>
 
-      <ul className="status-list">
-        <li>
-          <span className="status-label">会社名</span>
-          <span className="status-value">{summary.companyName}</span>
-        </li>
-        <li>
-          <span className="status-label">実施日</span>
-          <span className="status-value">{formatJapaneseDate(summary.workDate)}</span>
-        </li>
-        <li>
-          <span className="status-label">天候</span>
-          <span className="status-value">{summary.weather}</span>
-        </li>
-      </ul>
+      {participantState.isLoading ? (
+        <div className="status-panel public-print-loading">
+          <p>帳票を読み込んでいます。</p>
+        </div>
+      ) : null}
 
-      <div className="public-work-item-list">
-        {summary.workItems.map((workItem) => (
-          <PublicWorkItem key={workItem.id} workItem={workItem} />
-        ))}
-      </div>
+      {participantState.errorMessage ? (
+        <div className="status-panel warning-panel public-print-loading">
+          <p>{participantState.errorMessage}</p>
+        </div>
+      ) : null}
 
-      <div>
-        <h3>元請確認欄</h3>
-        {summary.primeContractorStamps.length > 0 ? (
-          <div className="public-stamp-list">
-            {summary.primeContractorStamps.map((stamp) => (
-              <PublicStamp key={stamp.id} stamp={stamp} />
-            ))}
-          </div>
-        ) : (
-          <p>未確認</p>
-        )}
-      </div>
+      {!participantState.isLoading && !participantState.errorMessage ? (
+        <KyPrintSheet
+          companyName={summary.companyName}
+          participantChecks={participantState.participantChecks}
+          primeContractorStamps={summary.primeContractorStamps}
+          siteName={siteName}
+          weather={summary.weather}
+          workDate={summary.workDate}
+          workItems={summary.workItems}
+        />
+      ) : null}
     </section>
-  )
-}
-
-function PublicWorkItem({ workItem }: { workItem: KyRecordWorkItem }) {
-  return (
-    <article className="public-work-item">
-      <h3>No. {workItem.order}</h3>
-      <dl>
-        <dt>作業内容</dt>
-        <dd>{workItem.workDescription}</dd>
-        <dt>危険ポイント</dt>
-        <dd>{workItem.riskPoint}</dd>
-        <dt>可能性</dt>
-        <dd>{workItem.possibility}</dd>
-        <dt>重大性</dt>
-        <dd>{workItem.severity}</dd>
-        <dt>評価</dt>
-        <dd>{workItem.riskScore}</dd>
-        <dt>危険度</dt>
-        <dd>{workItem.riskLevel}</dd>
-        <dt>危険ポイントの対策</dt>
-        <dd>{workItem.countermeasures}</dd>
-      </dl>
-    </article>
-  )
-}
-
-function PublicStamp({ stamp }: { stamp: PrimeContractorStamp }) {
-  return (
-    <div className="public-stamp">
-      <strong>{stamp.stampText}</strong>
-      <span>{stamp.displayName}</span>
-      <time>{stamp.stampedAtText}</time>
-    </div>
   )
 }
 
@@ -343,9 +404,63 @@ function toPublicKySummary(
             Boolean(stamp) && typeof stamp === 'object',
         ) as PrimeContractorStamp[])
       : [],
+    participantCount:
+      typeof data.participantCount === 'number' ? data.participantCount : 0,
     updatedAt:
       data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : null,
   }
+}
+
+function toPublicParticipantCheck(
+  id: string,
+  data: Record<string, unknown>,
+): PublicParticipantCheck {
+  const healthChecks =
+    data.healthChecks && typeof data.healthChecks === 'object'
+      ? (data.healthChecks as Record<string, unknown>)
+      : {}
+  const preWorkChecks =
+    data.preWorkChecks && typeof data.preWorkChecks === 'object'
+      ? (data.preWorkChecks as Record<string, unknown>)
+      : {}
+
+  return {
+    id,
+    temperatureC:
+      typeof data.temperatureC === 'number' ? data.temperatureC : null,
+    alcoholMg: typeof data.alcoholMg === 'number' ? data.alcoholMg : null,
+    healthChecks: {
+      conditionOk: healthChecks.conditionOk === true,
+      sleepOk: healthChecks.sleepOk === true,
+      breakfastOk: healthChecks.breakfastOk === true,
+    },
+    medicationStatus: toMedicationStatus(data.medicationStatus),
+    medicationNote:
+      typeof data.medicationNote === 'string' ? data.medicationNote : '',
+    healthNote: typeof data.healthNote === 'string' ? data.healthNote : '',
+    preWorkChecks: {
+      properClothing: preWorkChecks.properClothing === true,
+      qualifiedPersonnel: preWorkChecks.qualifiedPersonnel === true,
+      understandsRisksAndMeasures:
+        preWorkChecks.understandsRisksAndMeasures === true,
+      understandsProcedure: preWorkChecks.understandsProcedure === true,
+      signalCoordination: preWorkChecks.signalCoordination === true,
+      commandSystem: preWorkChecks.commandSystem === true,
+    },
+    signatureFormat: data.signatureFormat === 'svg' ? 'svg' : 'svg',
+    signatureData:
+      typeof data.signatureData === 'string' ? data.signatureData : '',
+    createdAtText:
+      typeof data.createdAtText === 'string' ? data.createdAtText : '',
+  }
+}
+
+function toMedicationStatus(value: unknown): MedicationStatus {
+  if (value === 'taken' || value === 'forgot' || value === 'none') {
+    return value
+  }
+
+  return 'none'
 }
 
 function getTodayWorkDate() {
