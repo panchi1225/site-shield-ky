@@ -11,6 +11,7 @@ import { KySignaturesPage } from './pages/KySignaturesPage'
 import { LoginPage } from './pages/LoginPage'
 import { PublicSiteViewPage } from './pages/PublicSiteViewPage'
 import { SignPage } from './pages/SignPage'
+import { SitePublicQrPage } from './pages/SitePublicQrPage'
 import { SiteWorkspacePage } from './pages/SiteWorkspacePage'
 import { ViewPage } from './pages/ViewPage'
 
@@ -51,6 +52,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <SiteWorkspacePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/app/sites/:siteId/public-qr"
+            element={
+              <ProtectedRoute>
+                <SitePublicQrPage />
               </ProtectedRoute>
             }
           />

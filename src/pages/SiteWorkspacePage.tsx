@@ -341,14 +341,19 @@ function PublicSiteViewPanel({
           <a className="text-link signature-url" href={siteViewUrl}>
             {siteViewUrl}
           </a>
-          <button
-            className="button-link primary"
-            disabled={isSyncing}
-            onClick={handleSyncTodayKy}
-            type="button"
-          >
-            {isSyncing ? '更新中...' : '本日の公開KYを更新'}
-          </button>
+          <div className="public-site-view-actions">
+            <button
+              className="button-link primary"
+              disabled={isSyncing}
+              onClick={handleSyncTodayKy}
+              type="button"
+            >
+              {isSyncing ? '更新中...' : '本日の公開KYを更新'}
+            </button>
+            <Link className="button-link" to={`/app/sites/${siteId}/public-qr`}>
+              掲示用QRを印刷
+            </Link>
+          </div>
         </div>
       ) : (
         <button
