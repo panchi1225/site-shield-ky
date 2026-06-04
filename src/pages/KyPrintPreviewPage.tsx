@@ -4,7 +4,7 @@ import { useCompany } from '../hooks/useCompany'
 import { useKyRecord } from '../hooks/useKyRecord'
 import { useSite } from '../hooks/useSite'
 import { useWorkerChecks } from '../hooks/useWorkerChecks'
-import type { KyRecordWorkItem } from '../types/kyRecord'
+import type { KyRecordWorkItem, PrimeContractorStamp } from '../types/kyRecord'
 import type { MedicationStatus, WorkerCheck } from '../types/workerCheck'
 import { createEmptyWorkItem, maxWorkItems } from '../utils/kyRecord'
 import { preWorkCheckItems } from '../utils/preWorkChecks'
@@ -144,6 +144,7 @@ export function KyPrintPreviewPage() {
             <h1>リスクアセスメントKY活動表</h1>
           </div>
           <PrimeStampBox
+            stamps={kyRecord.primeContractorStamps}
             stampText={kyRecord.stampText}
             stampedAt={kyRecord.stampedAt}
             stampedByName={kyRecord.stampedByName}
@@ -257,29 +258,59 @@ function PrintField({
 }
 
 function PrimeStampBox({
+  stamps,
   stampText,
   stampedAt,
   stampedByName,
 }: {
+  stamps: PrimeContractorStamp[]
   stampText: string
   stampedAt: Date | null
   stampedByName: string
 }) {
-  const hasStamp = Boolean(stampText || stampedByName || stampedAt)
+  const displayStamps =
+    stamps.length > 0
+      ? stamps.slice(0, 3)
+      : legacyPrimeStamp(stampText, stampedAt, stampedByName)
+  const hasStamp = displayStamps.length > 0
 
   return (
-    <div className={`prime-stamp-box ${hasStamp ? 'stamped' : ''}`}>
+    <div
+      className={`prime-stamp-box ${hasStamp ? 'stamped' : ''} stamp-count-${displayStamps.length}`}
+    >
       {hasStamp ? (
-        <div className="prime-stamp-mark">
-          <strong>{stampText || '確認'}</strong>
-          <span>{stampedByName}</span>
-          <time>{formatJapaneseDateFromDate(stampedAt)}</time>
-        </div>
+        displayStamps.map((stamp) => (
+          <div className="prime-stamp-mark" key={stamp.id}>
+            <strong>{stamp.stampText || '確認'}</strong>
+            <span>{stamp.displayName}</span>
+            <time>{stamp.stampedAtText}</time>
+          </div>
+        ))
       ) : (
         <span>元請確認欄</span>
       )}
     </div>
   )
+}
+
+function legacyPrimeStamp(
+  stampText: string,
+  stampedAt: Date | null,
+  stampedByName: string,
+): PrimeContractorStamp[] {
+  if (!stampText && !stampedByName && !stampedAt) {
+    return []
+  }
+
+  return [
+    {
+      id: 'legacy-stamp',
+      stampText: '確認',
+      displayName: stampedByName,
+      stampedByUid: '',
+      stampedAtText: formatJapaneseDateFromDate(stampedAt),
+    },
+  ]
 }
 
 function RiskRow({ workItem }: { workItem: KyRecordWorkItem }) {

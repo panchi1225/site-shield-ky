@@ -16,6 +16,14 @@ export type KyRecordWorkItem = {
   countermeasures: string
 }
 
+export type PrimeContractorStamp = {
+  id: string
+  stampText: '確認'
+  displayName: string
+  stampedByUid: string
+  stampedAtText: string
+}
+
 export type KyRecordDraftInput = {
   workDate: string
   weather: string
@@ -44,4 +52,5 @@ export type KyRecord = {
   stampedByName: string
   stampedAt: Date | null
   stampText: string
+  primeContractorStamps: PrimeContractorStamp[]
 }

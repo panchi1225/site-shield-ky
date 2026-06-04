@@ -3,6 +3,7 @@ import type {
   KyRecord,
   KyRecordStatus,
   KyRecordWorkItem,
+  PrimeContractorStamp,
 } from '../types/kyRecord'
 
 export const maxWorkItems = 4
@@ -43,6 +44,68 @@ function toDate(value: unknown) {
 
 function toNullableString(value: unknown) {
   return typeof value === 'string' ? value : null
+}
+
+function formatJapaneseDateFromDate(value: Date | null) {
+  if (!value) {
+    return ''
+  }
+
+  return `${value.getFullYear()}年 ${value.getMonth() + 1}月 ${value.getDate()}日`
+}
+
+function toPrimeContractorStamp(value: unknown): PrimeContractorStamp | null {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const data = value as Record<string, unknown>
+
+  if (
+    typeof data.id !== 'string' ||
+    typeof data.displayName !== 'string' ||
+    typeof data.stampedByUid !== 'string'
+  ) {
+    return null
+  }
+
+  return {
+    id: data.id,
+    stampText: '確認',
+    displayName: data.displayName,
+    stampedByUid: data.stampedByUid,
+    stampedAtText:
+      typeof data.stampedAtText === 'string' ? data.stampedAtText : '',
+  }
+}
+
+function toPrimeContractorStamps(
+  data: Record<string, unknown>,
+): PrimeContractorStamp[] {
+  const stamps = Array.isArray(data.primeContractorStamps)
+    ? data.primeContractorStamps
+        .map(toPrimeContractorStamp)
+        .filter((stamp): stamp is PrimeContractorStamp => stamp !== null)
+        .slice(0, 3)
+    : []
+
+  if (stamps.length > 0) {
+    return stamps
+  }
+
+  if (typeof data.stampedByName !== 'string' || !data.stampedByName) {
+    return []
+  }
+
+  return [
+    {
+      id: 'legacy-stamp',
+      stampText: '確認',
+      displayName: data.stampedByName,
+      stampedByUid: typeof data.stampedBy === 'string' ? data.stampedBy : '',
+      stampedAtText: formatJapaneseDateFromDate(toDate(data.stampedAt)),
+    },
+  ]
 }
 
 function toRatingValue(value: unknown): 1 | 2 | 3 {
@@ -214,6 +277,7 @@ export function toKyRecord(
       typeof data.stampedByName === 'string' ? data.stampedByName : '',
     stampedAt: toDate(data.stampedAt),
     stampText: typeof data.stampText === 'string' ? data.stampText : '',
+    primeContractorStamps: toPrimeContractorStamps(data),
   }
 }
 

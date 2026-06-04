@@ -747,15 +747,18 @@ p {
 .prime-stamp-box {
   width: 28mm;
   height: 14mm;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid #111827;
   color: #111827;
   font-weight: 700;
-  padding: 1mm;
+  gap: 0.7mm;
+  padding: 0.8mm;
 }
 
 .prime-stamp-box:not(.stamped) {
+  display: grid;
   place-items: start center;
   padding-top: 2mm;
 }
@@ -778,9 +781,27 @@ p {
   text-align: center;
 }
 
+.prime-stamp-box.stamp-count-2 .prime-stamp-mark {
+  width: 12mm;
+  height: 10.5mm;
+}
+
+.prime-stamp-box.stamp-count-3 .prime-stamp-mark {
+  width: 8.2mm;
+  height: 10.2mm;
+}
+
 .prime-stamp-mark strong {
   font-size: 10px;
   letter-spacing: 0;
+}
+
+.prime-stamp-box.stamp-count-2 .prime-stamp-mark strong {
+  font-size: 8px;
+}
+
+.prime-stamp-box.stamp-count-3 .prime-stamp-mark strong {
+  font-size: 6.4px;
 }
 
 .prime-stamp-mark span,
@@ -791,6 +812,63 @@ p {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.prime-stamp-box.stamp-count-2 .prime-stamp-mark span,
+.prime-stamp-box.stamp-count-2 .prime-stamp-mark time {
+  max-width: 9.5mm;
+  font-size: 4.4px;
+}
+
+.prime-stamp-box.stamp-count-3 .prime-stamp-mark span,
+.prime-stamp-box.stamp-count-3 .prime-stamp-mark time {
+  max-width: 6.8mm;
+  font-size: 3.6px;
+}
+
+.prime-contractor-stamp-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.stamp-summary-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stamp-summary-list li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 8px 0;
+}
+
+.stamp-control-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.stamp-control-row label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.stamp-control-row select {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  padding: 10px 12px;
 }
 
 .print-basic-grid {

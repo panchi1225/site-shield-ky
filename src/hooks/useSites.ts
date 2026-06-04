@@ -15,6 +15,7 @@ function toSite(id: string, data: Record<string, unknown>): Site {
     name: typeof data.name === 'string' ? data.name : '',
     address: typeof data.address === 'string' ? data.address : '',
     active: data.active === true,
+    primeContractorStampOptions: [],
   }
 }
 

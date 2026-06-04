@@ -16,6 +16,35 @@ function toSite(id: string, data: Record<string, unknown>): Site {
     name: typeof data.name === 'string' ? data.name : '',
     address: typeof data.address === 'string' ? data.address : '',
     active: data.active === true,
+    primeContractorStampOptions: Array.isArray(
+      data.primeContractorStampOptions,
+    )
+      ? data.primeContractorStampOptions
+          .map((option) => {
+            if (!option || typeof option !== 'object') {
+              return null
+            }
+
+            const optionData = option as Record<string, unknown>
+
+            if (
+              typeof optionData.id !== 'string' ||
+              typeof optionData.displayName !== 'string'
+            ) {
+              return null
+            }
+
+            return {
+              id: optionData.id,
+              displayName: optionData.displayName,
+            }
+          })
+          .filter(
+            (
+              option,
+            ): option is { id: string; displayName: string } => option !== null,
+          )
+      : [],
   }
 }
 
