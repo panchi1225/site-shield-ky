@@ -163,6 +163,7 @@ function PublicSiteViewPanel({
   userId: string
 }) {
   const [siteViewToken, setSiteViewToken] = useState(createdToken ?? '')
+  const [syncDate, setSyncDate] = useState(getTodayWorkDate())
   const [isCreating, setIsCreating] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [message, setMessage] = useState('')
@@ -215,7 +216,7 @@ function PublicSiteViewPanel({
     }
   }
 
-  async function handleSyncTodayKy() {
+  async function handleSyncPublicKy() {
     if (!siteViewToken) {
       setErrorMessage('先に現場掲示用URLを作成してください。')
       return
@@ -226,7 +227,6 @@ function PublicSiteViewPanel({
     setMessage('')
 
     try {
-      const today = getTodayWorkDate()
       const companiesSnapshot = await getDocs(
         query(collection(db, 'companies'), where('siteId', '==', siteId)),
       )
@@ -253,7 +253,7 @@ function PublicSiteViewPanel({
         query(
           collection(db, 'kyRecords'),
           where('siteId', '==', siteId),
-          where('workDate', '==', today),
+          where('workDate', '==', syncDate),
         ),
       )
       const publicKyRecords = kySnapshot.docs
@@ -261,8 +261,38 @@ function PublicSiteViewPanel({
         .filter((kyRecord) =>
           kyRecord.status === 'registered' || kyRecord.status === 'stamped',
         )
+      const publicKyRecordIds = new Set(
+        publicKyRecords.map((kyRecord) => kyRecord.id),
+      )
+      const existingPublicKySnapshot = await getDocs(
+        query(
+          collection(db, 'publicSiteViews', siteViewToken, 'kySummaries'),
+          where('workDate', '==', syncDate),
+        ),
+      )
 
       const batch = writeBatch(db)
+
+      for (const existingPublicKyDoc of existingPublicKySnapshot.docs) {
+        const participantChecksSnapshot = await getDocs(
+          collection(
+            db,
+            'publicSiteViews',
+            siteViewToken,
+            'kySummaries',
+            existingPublicKyDoc.id,
+            'participantChecks',
+          ),
+        )
+
+        participantChecksSnapshot.docs.forEach((participantCheckDoc) => {
+          batch.delete(participantCheckDoc.ref)
+        })
+
+        if (!publicKyRecordIds.has(existingPublicKyDoc.id)) {
+          batch.delete(existingPublicKyDoc.ref)
+        }
+      }
 
       for (const kyRecord of publicKyRecords) {
         const company = companyMap.get(kyRecord.companyId)
@@ -313,12 +343,14 @@ function PublicSiteViewPanel({
       )
       await batch.commit()
 
-      setMessage(`本日の公開KYを${publicKyRecords.length}件更新しました。`)
+      setMessage(
+        `${formatJapaneseDate(syncDate)}の公開KYを${publicKyRecords.length}件更新しました。`,
+      )
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : '本日の公開KYを更新できませんでした。',
+          : '選択日の公開KYを更新できませんでした。',
       )
     } finally {
       setIsSyncing(false)
@@ -341,14 +373,23 @@ function PublicSiteViewPanel({
           <a className="text-link signature-url" href={siteViewUrl}>
             {siteViewUrl}
           </a>
+          <div className="public-sync-date-control">
+            <label htmlFor="public-sync-date">公開KY更新日</label>
+            <input
+              id="public-sync-date"
+              onChange={(event) => setSyncDate(event.target.value)}
+              type="date"
+              value={syncDate}
+            />
+          </div>
           <div className="public-site-view-actions">
             <button
               className="button-link primary"
               disabled={isSyncing}
-              onClick={handleSyncTodayKy}
+              onClick={handleSyncPublicKy}
               type="button"
             >
-              {isSyncing ? '更新中...' : '本日の公開KYを更新'}
+              {isSyncing ? '更新中...' : '選択日の公開KYを更新'}
             </button>
             <Link className="button-link" to={`/app/sites/${siteId}/public-qr`}>
               掲示用QRを印刷
@@ -383,6 +424,16 @@ function getTodayWorkDate() {
   const day = String(today.getDate()).padStart(2, '0')
 
   return `${year}-${month}-${day}`
+}
+
+function formatJapaneseDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+
+  if (!match) {
+    return value
+  }
+
+  return `${Number(match[1])}年 ${Number(match[2])}月 ${Number(match[3])}日`
 }
 
 async function loadWorkerChecksForPublicSync(

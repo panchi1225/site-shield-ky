@@ -600,6 +600,28 @@ p {
   gap: 10px;
 }
 
+.public-sync-date-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.public-sync-date-control label {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.public-sync-date-control input {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  min-height: 40px;
+  padding: 8px 10px;
+}
+
 .public-qr-page {
   display: grid;
   justify-items: center;
