@@ -28,7 +28,15 @@ const companyTypeLabels: Record<Company['type'], string> = {
 export function SiteWorkspacePage() {
   const { siteId } = useParams()
   const { appUser, user } = useAuth()
-  const canViewSite = appUser?.role === 'admin'
+  const siteIds = appUser?.siteIds ?? []
+  const companyIds = appUser?.companyIds ?? []
+  const currentSiteId = siteId ?? ''
+  const isAdmin = appUser?.role === 'admin'
+  const isPrimeManager = appUser?.role === 'prime_manager'
+  const isSubcontractorManager = appUser?.role === 'subcontractor_manager'
+  const canViewSite =
+    isAdmin || (currentSiteId ? siteIds.includes(currentSiteId) : false)
+  const canManagePublicSiteView = isAdmin || isPrimeManager
   const { errorMessage, isLoading, isMissing, site } = useSite(
     siteId,
     canViewSite,
@@ -40,7 +48,7 @@ export function SiteWorkspacePage() {
         <div className="status-panel warning-panel">
           <h1>この現場ページはまだ利用できません</h1>
           <p>
-            今回は管理者だけが現場ページを閲覧できます。元請責任者と下請け責任者の表示制御は後で実装します。
+            このアカウントには、この現場を閲覧する権限が紐づいていません。管理者または元請責任者に確認してください。
           </p>
           <Link className="button-link" to="/app">
             現場選択へ戻る
@@ -122,30 +130,56 @@ export function SiteWorkspacePage() {
         </ul>
       </div>
 
-      <AdminCompaniesPanel siteId={site.id} />
-
-      <PublicSiteViewPanel
-        createdToken={site.publicSiteViewToken}
+      <SiteCompaniesPanel
+        companyIds={companyIds}
+        isSubcontractorManager={isSubcontractorManager}
         siteId={site.id}
-        siteName={site.name}
-        userId={user?.uid ?? ''}
       />
 
+      {canManagePublicSiteView ? (
+        <PublicSiteViewPanel
+          createdToken={site.publicSiteViewToken}
+          siteId={site.id}
+          siteName={site.name}
+          userId={user?.uid ?? ''}
+        />
+      ) : null}
+
       <div className="workspace-grid">
-        <section className="status-panel placeholder">
-          <h2>KY作成・閲覧・印刷</h2>
-          <p>この現場のKY作成・閲覧・印刷機能は後で実装します。</p>
-        </section>
+        {isSubcontractorManager ? (
+          <>
+            <section className="status-panel placeholder">
+              <h2>自社KY作成・署名確認・登録</h2>
+              <p>
+                自社分のKY作成、署名確認、KY登録は会社カードから進みます。
+              </p>
+            </section>
 
-        <section className="status-panel placeholder">
-          <h2>会社管理・下請け責任者登録</h2>
-          <p>会社の新規作成・編集・削除、下請け責任者登録は後で実装します。</p>
-        </section>
+            <section className="status-panel placeholder">
+              <h2>他社・他現場の操作制限</h2>
+              <p>
+                下請け責任者は、紐づいた現場と会社の範囲だけを操作する想定です。
+              </p>
+            </section>
+          </>
+        ) : (
+          <>
+            <section className="status-panel placeholder">
+              <h2>KY作成・閲覧・印刷</h2>
+              <p>この現場のKY作成・閲覧・印刷機能は後で実装します。</p>
+            </section>
 
-        <section className="status-panel placeholder">
-          <h2>署名確認・電子印鑑・掲示QR</h2>
-          <p>署名確認、電子印鑑、現場掲示用QR管理は後で実装します。</p>
-        </section>
+            <section className="status-panel placeholder">
+              <h2>会社管理・下請け責任者登録</h2>
+              <p>会社の新規作成・編集・削除、下請け責任者登録は後で実装します。</p>
+            </section>
+
+            <section className="status-panel placeholder">
+              <h2>署名確認・電子印鑑・掲示QR</h2>
+              <p>署名確認、電子印鑑、現場掲示用QR管理は後で実装します。</p>
+            </section>
+          </>
+        )}
       </div>
     </section>
   )
@@ -513,8 +547,19 @@ function formatJapaneseDateText(value: Date | null) {
   return `${value.getFullYear()}年 ${value.getMonth() + 1}月 ${value.getDate()}日`
 }
 
-function AdminCompaniesPanel({ siteId }: { siteId: string }) {
+function SiteCompaniesPanel({
+  companyIds,
+  isSubcontractorManager,
+  siteId,
+}: {
+  companyIds: string[]
+  isSubcontractorManager: boolean
+  siteId: string
+}) {
   const { companies, errorMessage, isLoading } = useCompanies(siteId, true)
+  const visibleCompanies = isSubcontractorManager
+    ? companies.filter((company) => companyIds.includes(company.id))
+    : companies
 
   if (isLoading) {
     return (
@@ -539,16 +584,24 @@ function AdminCompaniesPanel({ siteId }: { siteId: string }) {
       <div className="section-heading">
         <div>
           <h2>会社一覧</h2>
-          <p>この現場に紐づく会社だけを表示しています。</p>
+          <p>
+            {isSubcontractorManager
+              ? 'このアカウントに紐づく会社だけを表示しています。'
+              : 'この現場に紐づく会社だけを表示しています。'}
+          </p>
         </div>
         <span className="status-badge">会社追加は後で実装</span>
       </div>
 
       {companies.length === 0 ? (
         <p>この現場に会社が登録されていません。</p>
+      ) : visibleCompanies.length === 0 && isSubcontractorManager ? (
+        <p>
+          このアカウントに紐づく会社がありません。管理者または元請責任者に確認してください。
+        </p>
       ) : (
         <div className="company-list">
-          {companies.map((company) => (
+          {visibleCompanies.map((company) => (
             <CompanyListItem
               company={company}
               key={company.id}
