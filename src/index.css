@@ -492,6 +492,35 @@ p {
   gap: 10px;
 }
 
+.public-date-panel {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 240px) minmax(260px, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.public-date-panel label {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.public-date-panel input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  min-height: 42px;
+  padding: 8px 10px;
+}
+
+.public-date-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 .public-ky-item {
   width: 100%;
   min-width: 0;
@@ -1469,6 +1498,10 @@ p {
   }
 
   .public-ky-list {
+    grid-template-columns: 1fr;
+  }
+
+  .public-date-panel {
     grid-template-columns: 1fr;
   }
 

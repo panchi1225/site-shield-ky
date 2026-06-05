@@ -41,6 +41,8 @@ type ParticipantChecksState = {
 export function PublicSiteViewPage() {
   const { siteViewToken } = useParams()
   const [selectedKyRecordId, setSelectedKyRecordId] = useState('')
+  const today = useMemo(() => getTodayWorkDate(), [])
+  const [selectedDate, setSelectedDate] = useState(today)
   const [state, setState] = useState<PublicSiteViewState>({
     isLoading: true,
     errorMessage: '',
@@ -53,7 +55,6 @@ export function PublicSiteViewPage() {
       isLoading: false,
       participantChecks: [],
     })
-  const today = useMemo(() => getTodayWorkDate(), [])
   const selectedKySummary =
     state.kySummaries.find((summary) => summary.id === selectedKyRecordId) ??
     null
@@ -106,7 +107,7 @@ export function PublicSiteViewPage() {
         const summariesSnapshot = await getDocs(
           query(
             collection(db, 'publicSiteViews', currentToken, 'kySummaries'),
-            where('workDate', '==', today),
+            where('workDate', '==', selectedDate),
           ),
         )
         const kySummaries = summariesSnapshot.docs
@@ -159,7 +160,7 @@ export function PublicSiteViewPage() {
     return () => {
       isActive = false
     }
-  }, [siteViewToken, today])
+  }, [selectedDate, siteViewToken])
 
   useEffect(() => {
     let isActive = true
@@ -250,21 +251,44 @@ export function PublicSiteViewPage() {
     )
   }
 
+  function handleSelectedDateChange(nextDate: string) {
+    setSelectedDate(nextDate)
+    setSelectedKyRecordId('')
+    setParticipantState({
+      errorMessage: '',
+      isLoading: false,
+      participantChecks: [],
+    })
+  }
+
   return (
     <section className="page public-site-view-page">
       <div className="page-header">
         <p className="eyebrow">現場掲示用閲覧ページ</p>
         <h1>{state.siteView?.siteName || '現場名未設定'}</h1>
         <p className="lead">
-          本日のKY登録会社一覧: {formatJapaneseDate(today)}
+          {formatJapaneseDate(selectedDate)} のKY登録会社一覧
         </p>
       </div>
 
+      <section className="status-panel public-date-panel">
+        <label htmlFor="public-work-date">表示する日付</label>
+        <input
+          id="public-work-date"
+          onChange={(event) => handleSelectedDateChange(event.target.value)}
+          type="date"
+          value={selectedDate}
+        />
+        <p>
+          公開済みのKYだけを表示します。過去日は、管理画面で公開用データが同期されている場合に表示できます。
+        </p>
+      </section>
+
       {!selectedKySummary ? (
         <section className="status-panel public-ky-list-panel">
-          <h2>本日のKY登録会社一覧</h2>
+          <h2>{formatJapaneseDate(selectedDate)} のKY登録会社一覧</h2>
           {state.kySummaries.length === 0 ? (
-            <p>本日公開されているKYはありません。</p>
+            <p>この日付で公開されているKYはありません。</p>
           ) : (
             <div className="public-ky-list">
               {state.kySummaries.map((summary) => (
