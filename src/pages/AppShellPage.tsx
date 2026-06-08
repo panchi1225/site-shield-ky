@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { useSites } from '../hooks/useSites'
 import type { Site } from '../types/site'
-import type { UserRole } from '../types/user'
+import type { AppUser, UserRole } from '../types/user'
 
 const roleLabels: Record<UserRole, string> = {
   admin: '管理者',
@@ -161,13 +161,17 @@ function RolePanel({
         </ul>
       </div>
 
-      {appUser.role === 'admin' ? <AdminSitesPanel /> : null}
+      <SitesPanel appUser={appUser} />
     </>
   )
 }
 
-function AdminSitesPanel() {
-  const { errorMessage, isLoading, sites } = useSites(true)
+function SitesPanel({ appUser }: { appUser: AppUser }) {
+  const siteIds = appUser.siteIds ?? []
+  const { errorMessage, isLoading, sites } = useSites(true, {
+    role: appUser.role,
+    siteIds,
+  })
 
   if (isLoading) {
     return (

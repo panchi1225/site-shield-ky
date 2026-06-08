@@ -131,6 +131,7 @@ export function SiteWorkspacePage() {
       </div>
 
       <SiteCompaniesPanel
+        appUserRole={appUser?.role ?? 'subcontractor_manager'}
         companyIds={companyIds}
         isSubcontractorManager={isSubcontractorManager}
         siteId={site.id}
@@ -540,15 +541,20 @@ function formatJapaneseDateText(value: Date | null) {
 }
 
 function SiteCompaniesPanel({
+  appUserRole,
   companyIds,
   isSubcontractorManager,
   siteId,
 }: {
+  appUserRole: 'admin' | 'prime_manager' | 'subcontractor_manager'
   companyIds: string[]
   isSubcontractorManager: boolean
   siteId: string
 }) {
-  const { companies, errorMessage, isLoading } = useCompanies(siteId, true)
+  const { companies, errorMessage, isLoading } = useCompanies(siteId, true, {
+    role: appUserRole,
+    companyIds,
+  })
   const visibleCompanies = isSubcontractorManager
     ? companies.filter((company) => companyIds.includes(company.id))
     : companies
@@ -585,12 +591,12 @@ function SiteCompaniesPanel({
         <span className="status-badge">会社追加は後で実装</span>
       </div>
 
-      {companies.length === 0 ? (
-        <p>この現場に会社が登録されていません。</p>
-      ) : visibleCompanies.length === 0 && isSubcontractorManager ? (
+      {visibleCompanies.length === 0 && isSubcontractorManager ? (
         <p>
           このアカウントに紐づく会社がありません。管理者または元請責任者に確認してください。
         </p>
+      ) : companies.length === 0 ? (
+        <p>この現場に会社が登録されていません。</p>
       ) : (
         <div className="company-list">
           {visibleCompanies.map((company) => (

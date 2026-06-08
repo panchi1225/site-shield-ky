@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import type { Company, CompanyType } from '../types/company'
+import type { UserRole } from '../types/user'
 
 type CompaniesState = {
   companies: Company[]
   isLoading: boolean
   errorMessage: string
+}
+
+type UseCompaniesOptions = {
+  role?: UserRole
+  companyIds?: string[]
 }
 
 function isCompanyType(value: unknown): value is CompanyType {
@@ -30,7 +36,14 @@ function toCompany(id: string, data: Record<string, unknown>): Company {
   }
 }
 
-export function useCompanies(siteId: string | undefined, enabled: boolean) {
+export function useCompanies(
+  siteId: string | undefined,
+  enabled: boolean,
+  options: UseCompaniesOptions = {},
+) {
+  const role = options.role ?? 'admin'
+  const companyIds = options.companyIds ?? []
+  const companyIdsKey = companyIds.join('|')
   const [state, setState] = useState<CompaniesState>({
     companies: [],
     isLoading: false,
@@ -44,6 +57,45 @@ export function useCompanies(siteId: string | undefined, enabled: boolean) {
       setState({ companies: [], isLoading: true, errorMessage: '' })
 
       try {
+        if (role === 'subcontractor_manager') {
+          const uniqueCompanyIds = Array.from(new Set(companyIds)).filter(
+            Boolean,
+          )
+          const loadedCompanies = await Promise.all(
+            uniqueCompanyIds.map(async (companyId) => {
+              try {
+                const companySnapshot = await getDoc(
+                  doc(db, 'companies', companyId),
+                )
+
+                if (!companySnapshot.exists()) {
+                  return null
+                }
+
+                const company = toCompany(
+                  companySnapshot.id,
+                  companySnapshot.data(),
+                )
+
+                return company.siteId === currentSiteId ? company : null
+              } catch {
+                return null
+              }
+            }),
+          )
+
+          if (!isActive) {
+            return
+          }
+
+          const companies = loadedCompanies
+            .filter((company): company is Company => company !== null)
+            .sort((a, b) => a.name.localeCompare(b.name, 'ja'))
+
+          setState({ companies, isLoading: false, errorMessage: '' })
+          return
+        }
+
         const companiesQuery = query(
           collection(db, 'companies'),
           where('siteId', '==', currentSiteId),
@@ -85,7 +137,7 @@ export function useCompanies(siteId: string | undefined, enabled: boolean) {
     return () => {
       isActive = false
     }
-  }, [enabled, siteId])
+  }, [companyIdsKey, enabled, role, siteId])
 
   return state
 }
