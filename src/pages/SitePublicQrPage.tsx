@@ -2,12 +2,13 @@ import { QRCodeSVG } from 'qrcode.react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { useSite } from '../hooks/useSite'
+import { canUsePrimeContractorActions } from '../utils/accessControl'
 import { createSiteViewUrl } from '../utils/siteViewToken'
 
 export function SitePublicQrPage() {
   const { siteId } = useParams()
   const { appUser } = useAuth()
-  const canViewQrPage = appUser?.role === 'admin'
+  const canViewQrPage = canUsePrimeContractorActions(appUser, siteId)
   const { errorMessage, isLoading, isMissing, site } = useSite(
     siteId,
     canViewQrPage,
