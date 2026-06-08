@@ -6,9 +6,13 @@ import { useKyRecord } from '../hooks/useKyRecord'
 import { useWorkerChecks } from '../hooks/useWorkerChecks'
 import { db } from '../lib/firebase'
 import type { KyRecordStatus } from '../types/kyRecord'
-import type { MedicationStatus, WorkerCheck } from '../types/workerCheck'
+import type { MedicationStatus, PreWorkChecks, WorkerCheck } from '../types/workerCheck'
 import { getPrimaryWorkName } from '../utils/kyRecord'
-import { areAllPreWorkChecksDone, preWorkCheckItems } from '../utils/preWorkChecks'
+import {
+  areAllPreWorkChecksDone,
+  initialPreWorkChecks,
+  preWorkCheckItems,
+} from '../utils/preWorkChecks'
 
 const kyStatusLabels: Record<KyRecordStatus, string> = {
   draft: '下書き',
@@ -31,6 +35,8 @@ export function KySignaturesPage() {
   const [registerError, setRegisterError] = useState('')
   const [registerSuccessMessage, setRegisterSuccessMessage] = useState('')
   const [isRegistering, setIsRegistering] = useState(false)
+  const [preWorkChecks, setPreWorkChecks] =
+    useState<PreWorkChecks>(initialPreWorkChecks)
   const { errorMessage, isLoading, isMissing, kyRecord } = useKyRecord(
     kyRecordId,
     canViewSignatures,
@@ -67,6 +73,11 @@ export function KySignaturesPage() {
       return
     }
 
+    if (!areAllPreWorkChecksDone(preWorkChecks)) {
+      setRegisterError('作業前の確認事項をすべて確認してください。')
+      return
+    }
+
     const shouldRegister = window.confirm(
       'このKYを登録済みにします。登録後も署名受付は継続します。よろしいですか？',
     )
@@ -84,6 +95,9 @@ export function KySignaturesPage() {
         status: 'registered',
         registeredBy: user.uid,
         registeredAt: serverTimestamp(),
+        preWorkChecks,
+        preWorkCheckedBy: user.uid,
+        preWorkCheckedAt: serverTimestamp(),
         updatedBy: user.uid,
         updatedAt: serverTimestamp(),
       })
@@ -97,6 +111,10 @@ export function KySignaturesPage() {
     } finally {
       setIsRegistering(false)
     }
+  }
+
+  function updatePreWorkCheck(field: keyof PreWorkChecks, value: boolean) {
+    setPreWorkChecks((current) => ({ ...current, [field]: value }))
   }
 
   if (!canViewSignatures) {
@@ -217,6 +235,22 @@ export function KySignaturesPage() {
         {kyRecord.status === 'signature_open' && workerChecks.length === 0 ? (
           <p className="form-error">署名が1件以上必要です。</p>
         ) : null}
+        {kyRecord.status === 'signature_open' ? (
+          <fieldset className="check-fieldset">
+            <legend>作業前の確認事項</legend>
+            <p>
+              KY登録前に、職長または現場責任者が以下を確認してください。
+            </p>
+            {preWorkCheckItems.map((item) => (
+              <CheckLabel
+                checked={preWorkChecks[item.key]}
+                key={item.key}
+                label={item.label}
+                onChange={(value) => updatePreWorkCheck(item.key, value)}
+              />
+            ))}
+          </fieldset>
+        ) : null}
         {registerSuccessMessage ? (
           <p className="success-message" role="status">
             {registerSuccessMessage}
@@ -288,7 +322,6 @@ function SignatureReviewCard({
   workerCheck: WorkerCheck
 }) {
   const healthOk = isHealthOk(workerCheck)
-  const preWorkOk = areAllPreWorkChecksDone(workerCheck.preWorkChecks)
   const signatureSvg = getDisplayableSignatureSvg(workerCheck)
 
   return (
@@ -339,25 +372,10 @@ function SignatureReviewCard({
         />
         <DetailRow label="体調メモ" value={workerCheck.healthNote || 'なし'} />
         <DetailRow
-          label="作業前確認"
-          value={preWorkOk ? '確認済み' : '要確認'}
-        />
-        <DetailRow
           label="登録日時"
           value={formatDateTime(workerCheck.createdAt)}
         />
       </ul>
-      <div className="pre-work-review">
-        <h4>作業前確認事項</h4>
-        <ul>
-          {preWorkCheckItems.map((item) => (
-            <li key={item.key}>
-              <span>{workerCheck.preWorkChecks[item.key] ? '○' : '×'}</span>
-              <span>{item.label}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
       <div className="signature-preview">
         <h4>手書き署名</h4>
         {signatureSvg ? (
@@ -370,6 +388,27 @@ function SignatureReviewCard({
         )}
       </div>
     </article>
+  )
+}
+
+function CheckLabel({
+  checked,
+  label,
+  onChange,
+}: {
+  checked: boolean
+  label: string
+  onChange: (value: boolean) => void
+}) {
+  return (
+    <label className="check-label">
+      <input
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        type="checkbox"
+      />
+      <span>{label}</span>
+    </label>
   )
 }
 

@@ -507,6 +507,7 @@ function createPublicKySummary(
     representativeWorkDescription: getPrimaryWorkName(kyRecord),
     workItems: kyRecord.workItems,
     primeContractorStamps: kyRecord.primeContractorStamps,
+    preWorkChecks: kyRecord.preWorkChecks,
     participantCount,
     updatedAt: serverTimestamp(),
   }
@@ -526,15 +527,6 @@ function createPublicParticipantCheck(workerCheck: WorkerCheck) {
     medicationStatus: workerCheck.medicationStatus,
     medicationNote: workerCheck.medicationNote,
     healthNote: workerCheck.healthNote,
-    preWorkChecks: {
-      properClothing: workerCheck.preWorkChecks.properClothing,
-      qualifiedPersonnel: workerCheck.preWorkChecks.qualifiedPersonnel,
-      understandsRisksAndMeasures:
-        workerCheck.preWorkChecks.understandsRisksAndMeasures,
-      understandsProcedure: workerCheck.preWorkChecks.understandsProcedure,
-      signalCoordination: workerCheck.preWorkChecks.signalCoordination,
-      commandSystem: workerCheck.preWorkChecks.commandSystem,
-    },
     createdAtText: formatJapaneseDateText(workerCheck.createdAt),
   }
 }

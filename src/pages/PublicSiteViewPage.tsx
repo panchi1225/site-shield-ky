@@ -18,7 +18,7 @@ import type {
   PublicSiteView,
 } from '../types/publicSiteView'
 import type { KyRecordWorkItem, PrimeContractorStamp } from '../types/kyRecord'
-import type { MedicationStatus } from '../types/workerCheck'
+import type { MedicationStatus, PreWorkChecks } from '../types/workerCheck'
 
 const publicStatusLabels: Record<PublicKySummaryStatus, string> = {
   registered: '登録済み',
@@ -448,6 +448,7 @@ function PublicKyPrintPreview({
               companyName={summary.companyName}
               participantChecks={participantState.participantChecks}
               primeContractorStamps={summary.primeContractorStamps}
+              preWorkChecks={summary.preWorkChecks}
               siteName={siteName}
               weather={summary.weather}
               workDate={summary.workDate}
@@ -510,6 +511,7 @@ function toPublicKySummary(
             Boolean(stamp) && typeof stamp === 'object',
         ) as PrimeContractorStamp[])
       : [],
+    preWorkChecks: toPreWorkChecks(data.preWorkChecks),
     participantCount:
       typeof data.participantCount === 'number' ? data.participantCount : 0,
     updatedAt:
@@ -525,11 +527,6 @@ function toPublicParticipantCheck(
     data.healthChecks && typeof data.healthChecks === 'object'
       ? (data.healthChecks as Record<string, unknown>)
       : {}
-  const preWorkChecks =
-    data.preWorkChecks && typeof data.preWorkChecks === 'object'
-      ? (data.preWorkChecks as Record<string, unknown>)
-      : {}
-
   return {
     id,
     temperatureC:
@@ -544,20 +541,28 @@ function toPublicParticipantCheck(
     medicationNote:
       typeof data.medicationNote === 'string' ? data.medicationNote : '',
     healthNote: typeof data.healthNote === 'string' ? data.healthNote : '',
-    preWorkChecks: {
-      properClothing: preWorkChecks.properClothing === true,
-      qualifiedPersonnel: preWorkChecks.qualifiedPersonnel === true,
-      understandsRisksAndMeasures:
-        preWorkChecks.understandsRisksAndMeasures === true,
-      understandsProcedure: preWorkChecks.understandsProcedure === true,
-      signalCoordination: preWorkChecks.signalCoordination === true,
-      commandSystem: preWorkChecks.commandSystem === true,
-    },
     signatureFormat: data.signatureFormat === 'svg' ? 'svg' : 'svg',
     signatureData:
       typeof data.signatureData === 'string' ? data.signatureData : '',
     createdAtText:
       typeof data.createdAtText === 'string' ? data.createdAtText : '',
+  }
+}
+
+function toPreWorkChecks(value: unknown): PreWorkChecks | null {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const data = value as Record<string, unknown>
+
+  return {
+    properClothing: data.properClothing === true,
+    qualifiedPersonnel: data.qualifiedPersonnel === true,
+    understandsRisksAndMeasures: data.understandsRisksAndMeasures === true,
+    understandsProcedure: data.understandsProcedure === true,
+    signalCoordination: data.signalCoordination === true,
+    commandSystem: data.commandSystem === true,
   }
 }
 

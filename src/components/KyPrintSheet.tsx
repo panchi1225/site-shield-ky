@@ -11,7 +11,6 @@ export type KyPrintParticipantCheck = {
   medicationStatus: MedicationStatus
   medicationNote: string
   healthNote: string
-  preWorkChecks: PreWorkChecks
   signatureFormat: 'svg'
   signatureData: string
   createdAt?: Date | null
@@ -22,6 +21,7 @@ type KyPrintSheetProps = {
   companyName: string
   participantChecks: KyPrintParticipantCheck[]
   primeContractorStamps: PrimeContractorStamp[]
+  preWorkChecks: PreWorkChecks | null
   siteName: string
   stampText?: string
   stampedAt?: Date | null
@@ -43,6 +43,7 @@ export function KyPrintSheet({
   companyName,
   participantChecks,
   primeContractorStamps,
+  preWorkChecks,
   siteName,
   stampText = '',
   stampedAt = null,
@@ -109,7 +110,7 @@ export function KyPrintSheet({
               startIndex={0}
             />
           </div>
-          <RiskCriteriaPanel participantChecks={participantChecks} />
+          <RiskCriteriaPanel preWorkChecks={preWorkChecks} />
         </section>
       </article>
 
@@ -257,9 +258,9 @@ function RiskRow({ workItem }: { workItem: KyRecordWorkItem }) {
 }
 
 function RiskCriteriaPanel({
-  participantChecks,
+  preWorkChecks,
 }: {
-  participantChecks: KyPrintParticipantCheck[]
+  preWorkChecks: PreWorkChecks | null
 }) {
   return (
     <section className="risk-estimate-panel">
@@ -358,15 +359,15 @@ function RiskCriteriaPanel({
           </tr>
         </tbody>
       </table>
-      <PreWorkCheckPrintTable participantChecks={participantChecks} />
+      <PreWorkCheckPrintTable preWorkChecks={preWorkChecks} />
     </section>
   )
 }
 
 function PreWorkCheckPrintTable({
-  participantChecks,
+  preWorkChecks,
 }: {
-  participantChecks: KyPrintParticipantCheck[]
+  preWorkChecks: PreWorkChecks | null
 }) {
   return (
     <section className="pre-work-print-panel">
@@ -384,7 +385,7 @@ function PreWorkCheckPrintTable({
             <tr key={item.key}>
               <td className="number-cell">{index + 1}</td>
               <td className="center-cell">
-                {isPreWorkCheckedForAll(participantChecks, item.key) ? '○' : ''}
+                {preWorkChecks?.[item.key] ? '○' : ''}
               </td>
               <td>{item.label}</td>
             </tr>
@@ -392,18 +393,6 @@ function PreWorkCheckPrintTable({
         </tbody>
       </table>
     </section>
-  )
-}
-
-function isPreWorkCheckedForAll(
-  participantChecks: KyPrintParticipantCheck[],
-  key: (typeof preWorkCheckItems)[number]['key'],
-) {
-  return (
-    participantChecks.length > 0 &&
-    participantChecks.every(
-      (participantCheck) => participantCheck.preWorkChecks[key],
-    )
   )
 }
 

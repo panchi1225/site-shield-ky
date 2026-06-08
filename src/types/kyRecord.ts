@@ -1,3 +1,5 @@
+import type { PreWorkChecks } from './workerCheck'
+
 export type KyRecordStatus =
   | 'draft'
   | 'signature_open'
@@ -53,4 +55,7 @@ export type KyRecord = {
   stampedAt: Date | null
   stampText: string
   primeContractorStamps: PrimeContractorStamp[]
+  preWorkChecks: PreWorkChecks | null
+  preWorkCheckedBy: string | null
+  preWorkCheckedAt: Date | null
 }

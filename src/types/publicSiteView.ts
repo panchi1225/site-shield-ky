@@ -32,6 +32,7 @@ export type PublicKySummary = {
   representativeWorkDescription: string
   workItems: KyRecordWorkItem[]
   primeContractorStamps: PrimeContractorStamp[]
+  preWorkChecks: PreWorkChecks | null
   participantCount: number
   updatedAt: Date | null
 }
@@ -44,7 +45,6 @@ export type PublicParticipantCheck = {
   medicationStatus: MedicationStatus
   medicationNote: string
   healthNote: string
-  preWorkChecks: PreWorkChecks
   signatureFormat: 'svg'
   signatureData: string
   createdAtText: string

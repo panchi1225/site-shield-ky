@@ -128,6 +128,7 @@ export function KyPrintPreviewPage() {
         companyName={company?.name ?? ''}
         participantChecks={workerChecks}
         primeContractorStamps={kyRecord.primeContractorStamps}
+        preWorkChecks={kyRecord.preWorkChecks}
         siteName={site?.name ?? ''}
         stampedAt={kyRecord.stampedAt}
         stampedByName={kyRecord.stampedByName}

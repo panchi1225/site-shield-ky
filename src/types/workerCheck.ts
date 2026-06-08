@@ -27,7 +27,7 @@ export type WorkerCheck = {
   medicationStatus: MedicationStatus
   medicationNote: string
   healthNote: string
-  preWorkChecks: PreWorkChecks
+  preWorkChecks?: PreWorkChecks
   signatureFormat: 'svg'
   signatureData: string
   submittedByUid: string

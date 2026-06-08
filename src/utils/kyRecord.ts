@@ -5,6 +5,7 @@ import type {
   KyRecordWorkItem,
   PrimeContractorStamp,
 } from '../types/kyRecord'
+import type { PreWorkChecks } from '../types/workerCheck'
 
 export const maxWorkItems = 4
 
@@ -106,6 +107,23 @@ function toPrimeContractorStamps(
       stampedAtText: formatJapaneseDateFromDate(toDate(data.stampedAt)),
     },
   ]
+}
+
+function toPreWorkChecks(value: unknown): PreWorkChecks | null {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const data = value as Record<string, unknown>
+
+  return {
+    properClothing: data.properClothing === true,
+    qualifiedPersonnel: data.qualifiedPersonnel === true,
+    understandsRisksAndMeasures: data.understandsRisksAndMeasures === true,
+    understandsProcedure: data.understandsProcedure === true,
+    signalCoordination: data.signalCoordination === true,
+    commandSystem: data.commandSystem === true,
+  }
 }
 
 function toRatingValue(value: unknown): 1 | 2 | 3 {
@@ -278,6 +296,9 @@ export function toKyRecord(
     stampedAt: toDate(data.stampedAt),
     stampText: typeof data.stampText === 'string' ? data.stampText : '',
     primeContractorStamps: toPrimeContractorStamps(data),
+    preWorkChecks: toPreWorkChecks(data.preWorkChecks),
+    preWorkCheckedBy: toNullableString(data.preWorkCheckedBy),
+    preWorkCheckedAt: toDate(data.preWorkCheckedAt),
   }
 }
 
