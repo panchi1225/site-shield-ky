@@ -5,11 +5,12 @@ import { useCompany } from '../hooks/useCompany'
 import { useKyRecord } from '../hooks/useKyRecord'
 import { useSite } from '../hooks/useSite'
 import { useWorkerChecks } from '../hooks/useWorkerChecks'
+import { canAccessCompany } from '../utils/accessControl'
 
 export function KyPrintPreviewPage() {
   const { companyId, kyRecordId, siteId } = useParams()
   const { appUser } = useAuth()
-  const canViewPrint = appUser?.role === 'admin'
+  const canViewPrint = canAccessCompany(appUser, siteId, companyId)
   const {
     errorMessage: kyErrorMessage,
     isLoading: isKyLoading,

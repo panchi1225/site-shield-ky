@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useCompany } from '../hooks/useCompany'
 import { db } from '../lib/firebase'
 import type { KyRecordDraftInput, KyRecordWorkItem } from '../types/kyRecord'
+import { canAccessCompany } from '../utils/accessControl'
 import {
   createEmptyWorkItem,
   getPossibilityLabel,
@@ -32,7 +33,7 @@ export function KyCreatePage() {
   const navigate = useNavigate()
   const { companyId, siteId } = useParams()
   const { appUser, user } = useAuth()
-  const canCreateKy = appUser?.role === 'admin'
+  const canCreateKy = canAccessCompany(appUser, siteId, companyId)
   const { company, errorMessage, isLoading, isMissing } = useCompany(
     companyId,
     canCreateKy,

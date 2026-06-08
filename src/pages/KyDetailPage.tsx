@@ -19,6 +19,10 @@ import type {
 } from '../types/kyRecord'
 import type { PrimeContractorStampOption } from '../types/site'
 import {
+  canAccessCompany,
+  canUsePrimeContractorActions,
+} from '../utils/accessControl'
+import {
   getPossibilityLabel,
   getPrimaryWorkName,
   getSeverityLabel,
@@ -39,7 +43,8 @@ const kyStatusLabels: Record<KyRecordStatus, string> = {
 export function KyDetailPage() {
   const { companyId, kyRecordId, siteId } = useParams()
   const { appUser, user } = useAuth()
-  const canViewKyRecord = appUser?.role === 'admin'
+  const canViewKyRecord = canAccessCompany(appUser, siteId, companyId)
+  const canStampKyRecord = canUsePrimeContractorActions(appUser, siteId)
   const [reloadKey, setReloadKey] = useState(0)
   const [actionError, setActionError] = useState('')
   const [isOpeningSignature, setIsOpeningSignature] = useState(false)
@@ -386,7 +391,8 @@ export function KyDetailPage() {
         />
       ) : null}
 
-      {kyRecord.status === 'registered' || kyRecord.status === 'stamped' ? (
+      {canStampKyRecord &&
+      (kyRecord.status === 'registered' || kyRecord.status === 'stamped') ? (
         <PrimeContractorStampPanel
           availableOptions={availableStampOptions}
           isStamping={isStamping}

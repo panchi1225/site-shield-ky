@@ -4,6 +4,7 @@ import { useCompany } from '../hooks/useCompany'
 import { useKyRecords } from '../hooks/useKyRecords'
 import type { Company } from '../types/company'
 import type { KyRecord, KyRecordStatus } from '../types/kyRecord'
+import { canAccessCompany } from '../utils/accessControl'
 import { getPrimaryWorkName } from '../utils/kyRecord'
 
 const companyTypeLabels: Record<Company['type'], string> = {
@@ -21,7 +22,7 @@ const kyStatusLabels: Record<KyRecordStatus, string> = {
 export function CompanyWorkspacePage() {
   const { companyId, siteId } = useParams()
   const { appUser } = useAuth()
-  const canViewCompany = appUser?.role === 'admin'
+  const canViewCompany = canAccessCompany(appUser, siteId, companyId)
   const { company, errorMessage, isLoading, isMissing } = useCompany(
     companyId,
     canViewCompany,

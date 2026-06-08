@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useKyRecord } from '../hooks/useKyRecord'
 import { db } from '../lib/firebase'
 import type { KyRecordDraftInput, KyRecordWorkItem } from '../types/kyRecord'
+import { canAccessCompany } from '../utils/accessControl'
 import {
   createEmptyWorkItem,
   getPossibilityLabel,
@@ -39,7 +40,7 @@ export function KyEditPage() {
   const navigate = useNavigate()
   const { companyId, kyRecordId, siteId } = useParams()
   const { appUser, user } = useAuth()
-  const canEditKy = appUser?.role === 'admin'
+  const canEditKy = canAccessCompany(appUser, siteId, companyId)
   const { errorMessage, isLoading, isMissing, kyRecord } = useKyRecord(
     kyRecordId,
     canEditKy,

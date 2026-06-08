@@ -7,6 +7,7 @@ import { useWorkerChecks } from '../hooks/useWorkerChecks'
 import { db } from '../lib/firebase'
 import type { KyRecordStatus } from '../types/kyRecord'
 import type { MedicationStatus, PreWorkChecks, WorkerCheck } from '../types/workerCheck'
+import { canAccessCompany } from '../utils/accessControl'
 import { getPrimaryWorkName } from '../utils/kyRecord'
 import {
   areAllPreWorkChecksDone,
@@ -30,7 +31,7 @@ const medicationStatusLabels: Record<MedicationStatus, string> = {
 export function KySignaturesPage() {
   const { companyId, kyRecordId, siteId } = useParams()
   const { appUser, user } = useAuth()
-  const canViewSignatures = appUser?.role === 'admin'
+  const canViewSignatures = canAccessCompany(appUser, siteId, companyId)
   const [reloadKey, setReloadKey] = useState(0)
   const [registerError, setRegisterError] = useState('')
   const [registerSuccessMessage, setRegisterSuccessMessage] = useState('')
