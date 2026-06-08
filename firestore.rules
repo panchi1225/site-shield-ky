@@ -1,0 +1,596 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedInUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isActiveUser() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && signedInUser().data.active == true;
+    }
+
+    function isAdmin() {
+      return isActiveUser() && signedInUser().data.role == "admin";
+    }
+
+    function isPrimeManager() {
+      return isActiveUser() && signedInUser().data.role == "prime_manager";
+    }
+
+    function isSubcontractorManager() {
+      return isActiveUser() && signedInUser().data.role == "subcontractor_manager";
+    }
+
+    function userSiteIds() {
+      return signedInUser().data.siteIds is list ? signedInUser().data.siteIds : [];
+    }
+
+    function userCompanyIds() {
+      return signedInUser().data.companyIds is list ? signedInUser().data.companyIds : [];
+    }
+
+    function hasAssignedSite(siteId) {
+      return isActiveUser() && siteId in userSiteIds();
+    }
+
+    function hasAssignedCompany(companyId) {
+      return isActiveUser() && companyId in userCompanyIds();
+    }
+
+    function canReadSite(siteId) {
+      return isAdmin() || hasAssignedSite(siteId);
+    }
+
+    function canManagePublicSite(siteId) {
+      return isAdmin() || (isPrimeManager() && hasAssignedSite(siteId));
+    }
+
+    function canReadCompany(siteId, companyId) {
+      return isAdmin()
+        || (isPrimeManager() && hasAssignedSite(siteId))
+        || (
+          isSubcontractorManager()
+          && hasAssignedSite(siteId)
+          && hasAssignedCompany(companyId)
+        );
+    }
+
+    function canManageCompany(siteId, companyId) {
+      return canReadCompany(siteId, companyId);
+    }
+
+    function canStampKy(ky) {
+      return isAdmin() || (isPrimeManager() && hasAssignedSite(ky.siteId));
+    }
+
+    function canManagePublicSiteView(siteViewToken) {
+      return isAdmin()
+        || (
+          isPrimeManager()
+          && hasAssignedSite(
+            get(/databases/$(database)/documents/publicSiteViews/$(siteViewToken)).data.siteId
+          )
+        );
+    }
+
+    function canReadOrManageSignatureSession(session) {
+      return isAdmin()
+        || (isPrimeManager() && hasAssignedSite(session.siteId))
+        || (
+          isSubcontractorManager()
+          && hasAssignedSite(session.siteId)
+          && hasAssignedCompany(session.companyId)
+        );
+    }
+
+    function validRatingValue(value) {
+      return value == 1 || value == 2 || value == 3;
+    }
+
+    function validRiskLevel(value) {
+      return value == "I" || value == "II" || value == "III" || value == "IV";
+    }
+
+    function validWorkItem(item) {
+      return item.id is string
+        && item.order is number
+        && item.workDescription is string
+        && item.riskPoint is string
+        && validRatingValue(item.possibility)
+        && validRatingValue(item.severity)
+        && item.riskScore is number
+        && validRiskLevel(item.riskLevel)
+        && item.countermeasures is string;
+    }
+
+    function validWorkItems() {
+      return request.resource.data.workItems is list
+        && request.resource.data.workItems.size() >= 1
+        && request.resource.data.workItems.size() <= 4
+        && validWorkItem(request.resource.data.workItems[0])
+        && (
+          request.resource.data.workItems.size() < 2
+          || validWorkItem(request.resource.data.workItems[1])
+        )
+        && (
+          request.resource.data.workItems.size() < 3
+          || validWorkItem(request.resource.data.workItems[2])
+        )
+        && (
+          request.resource.data.workItems.size() < 4
+          || validWorkItem(request.resource.data.workItems[3])
+        );
+    }
+
+    function validKyCommonFields() {
+      return request.resource.data.siteId is string
+        && request.resource.data.companyId is string
+        && request.resource.data.workDate is string
+        && request.resource.data.weather is string
+        && validWorkItems();
+    }
+
+    function validKyCreateFields() {
+      return request.resource.data.keys().hasOnly([
+          "siteId",
+          "companyId",
+          "workDate",
+          "weather",
+          "status",
+          "workItems",
+          "createdBy",
+          "createdByName",
+          "createdAt",
+          "updatedBy",
+          "updatedAt",
+          "registeredBy",
+          "registeredAt",
+          "stampedBy",
+          "stampedAt",
+          "signatureOpenedBy",
+          "signatureOpenAt"
+        ])
+        && validKyCommonFields()
+        && request.resource.data.createdByName is string
+        && request.resource.data.registeredBy == null
+        && request.resource.data.registeredAt == null
+        && request.resource.data.stampedBy == null
+        && request.resource.data.stampedAt == null
+        && request.resource.data.signatureOpenedBy == null
+        && request.resource.data.signatureOpenAt == null;
+    }
+
+    function validPreWorkChecks(value) {
+      return value is map
+        && value.properClothing == true
+        && value.qualifiedPersonnel == true
+        && value.understandsRisksAndMeasures == true
+        && value.understandsProcedure == true
+        && value.signalCoordination == true
+        && value.commandSystem == true;
+    }
+
+    function validOptionalPreWorkChecks(value) {
+      return value == null || (
+        value is map
+        && value.properClothing is bool
+        && value.qualifiedPersonnel is bool
+        && value.understandsRisksAndMeasures is bool
+        && value.understandsProcedure is bool
+        && value.signalCoordination is bool
+        && value.commandSystem is bool
+      );
+    }
+
+    function validPrimeStamp(stamp) {
+      return stamp.id is string
+        && stamp.displayName is string
+        && stamp.stampText == "確認"
+        && stamp.stampedByUid is string
+        && stamp.stampedAtText is string;
+    }
+
+    function validPrimeContractorStamps() {
+      return request.resource.data.primeContractorStamps is list
+        && request.resource.data.primeContractorStamps.size() >= 1
+        && request.resource.data.primeContractorStamps.size() <= 3
+        && validPrimeStamp(request.resource.data.primeContractorStamps[0])
+        && (
+          request.resource.data.primeContractorStamps.size() < 2
+          || validPrimeStamp(request.resource.data.primeContractorStamps[1])
+        )
+        && (
+          request.resource.data.primeContractorStamps.size() < 3
+          || validPrimeStamp(request.resource.data.primeContractorStamps[2])
+        );
+    }
+
+    function validPublicKySummary() {
+      return request.resource.data.keys().hasOnly([
+          "kyRecordId",
+          "siteId",
+          "companyId",
+          "companyName",
+          "workDate",
+          "weather",
+          "status",
+          "representativeWorkDescription",
+          "workItems",
+          "primeContractorStamps",
+          "preWorkChecks",
+          "participantCount",
+          "updatedAt"
+        ])
+        && request.resource.data.kyRecordId is string
+        && request.resource.data.siteId is string
+        && request.resource.data.companyId is string
+        && request.resource.data.companyName is string
+        && request.resource.data.workDate is string
+        && request.resource.data.weather is string
+        && (
+          request.resource.data.status == "registered"
+          || request.resource.data.status == "stamped"
+        )
+        && request.resource.data.representativeWorkDescription is string
+        && request.resource.data.workItems is list
+        && request.resource.data.workItems.size() >= 1
+        && request.resource.data.workItems.size() <= 4
+        && request.resource.data.primeContractorStamps is list
+        && request.resource.data.primeContractorStamps.size() <= 3
+        && validOptionalPreWorkChecks(request.resource.data.preWorkChecks)
+        && request.resource.data.participantCount is number;
+    }
+
+    function validPublicParticipantCheck() {
+      return request.resource.data.keys().hasOnly([
+          "signatureFormat",
+          "signatureData",
+          "temperatureC",
+          "alcoholMg",
+          "healthChecks",
+          "medicationStatus",
+          "medicationNote",
+          "healthNote",
+          "preWorkChecks",
+          "createdAtText"
+        ])
+        && request.resource.data.signatureFormat == "svg"
+        && request.resource.data.signatureData is string
+        && (request.resource.data.temperatureC == null || request.resource.data.temperatureC is number)
+        && (request.resource.data.alcoholMg == null || request.resource.data.alcoholMg is number)
+        && request.resource.data.healthChecks is map
+        && request.resource.data.healthChecks.conditionOk is bool
+        && request.resource.data.healthChecks.sleepOk is bool
+        && request.resource.data.healthChecks.breakfastOk is bool
+        && (
+          request.resource.data.medicationStatus == "taken"
+          || request.resource.data.medicationStatus == "forgot"
+          || request.resource.data.medicationStatus == "none"
+        )
+        && request.resource.data.medicationNote is string
+        && request.resource.data.healthNote is string
+        && validOptionalPreWorkChecks(request.resource.data.preWorkChecks)
+        && request.resource.data.createdAtText is string;
+    }
+
+    function validSignatureSessionCreate() {
+      return request.resource.data.keys().hasOnly([
+          "siteId",
+          "siteName",
+          "companyId",
+          "companyName",
+          "kyRecordId",
+          "workDate",
+          "workItems",
+          "active",
+          "createdBy",
+          "createdAt",
+          "expiresAt",
+          "closedAt",
+          "closedBy"
+        ])
+        && request.resource.data.active == true
+        && request.resource.data.siteId is string
+        && request.resource.data.siteName is string
+        && request.resource.data.companyId is string
+        && request.resource.data.companyName is string
+        && request.resource.data.kyRecordId is string
+        && request.resource.data.workDate is string
+        && request.resource.data.workItems is list
+        && request.resource.data.workItems.size() >= 1
+        && request.resource.data.workItems.size() <= 4
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.expiresAt == null
+        && request.resource.data.closedAt == null
+        && request.resource.data.closedBy == null;
+    }
+
+    function validWorkerCheckCreate() {
+      return request.resource.data.keys().hasOnly([
+          "temperatureC",
+          "alcoholMg",
+          "healthChecks",
+          "medicationStatus",
+          "medicationNote",
+          "healthNote",
+          "preWorkChecks",
+          "signatureFormat",
+          "signatureData",
+          "submittedByUid",
+          "submittedByAuthType",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.submittedByUid == request.auth.uid
+        && (request.resource.data.temperatureC == null || request.resource.data.temperatureC is number)
+        && (request.resource.data.alcoholMg == null || request.resource.data.alcoholMg is number)
+        && request.resource.data.healthChecks is map
+        && request.resource.data.healthChecks.conditionOk is bool
+        && request.resource.data.healthChecks.sleepOk is bool
+        && request.resource.data.healthChecks.breakfastOk is bool
+        && (
+          request.resource.data.medicationStatus == "taken"
+          || request.resource.data.medicationStatus == "forgot"
+          || request.resource.data.medicationStatus == "none"
+        )
+        && request.resource.data.medicationNote is string
+        && (
+          request.resource.data.medicationStatus != "taken"
+          || request.resource.data.medicationNote.size() > 0
+        )
+        && request.resource.data.healthNote is string
+        && validOptionalPreWorkChecks(request.resource.data.preWorkChecks)
+        && request.resource.data.signatureFormat == "svg"
+        && request.resource.data.signatureData is string;
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    match /sites/{siteId} {
+      allow read: if canReadSite(siteId);
+
+      allow update: if canManagePublicSite(siteId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "publicSiteViewToken",
+          "publicSiteViewCreatedAt",
+          "publicSiteViewCreatedBy",
+          "updatedAt"
+        ])
+        && request.resource.data.publicSiteViewToken is string
+        && request.resource.data.publicSiteViewCreatedBy == request.auth.uid;
+
+      allow create, delete: if false;
+    }
+
+    match /companies/{companyId} {
+      allow read: if canReadCompany(resource.data.siteId, companyId);
+      allow write: if false;
+    }
+
+    match /kyRecords/{kyRecordId} {
+      allow read: if canManageCompany(resource.data.siteId, resource.data.companyId);
+
+      allow create: if canManageCompany(request.resource.data.siteId, request.resource.data.companyId)
+        && request.resource.data.status == "draft"
+        && validKyCreateFields()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedBy == request.auth.uid;
+
+      allow update: if (
+        (
+          canManageCompany(resource.data.siteId, resource.data.companyId)
+          && resource.data.status == "draft"
+          && request.resource.data.status == "draft"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "weather",
+            "workItems",
+            "updatedBy",
+            "updatedAt"
+          ])
+          && validKyCommonFields()
+          && request.resource.data.updatedBy == request.auth.uid
+        )
+
+        ||
+
+        (
+          canManageCompany(resource.data.siteId, resource.data.companyId)
+          && resource.data.status == "draft"
+          && request.resource.data.status == "signature_open"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "status",
+            "updatedBy",
+            "updatedAt",
+            "signatureOpenedBy",
+            "signatureOpenAt"
+          ])
+          && request.resource.data.updatedBy == request.auth.uid
+          && request.resource.data.signatureOpenedBy == request.auth.uid
+        )
+
+        ||
+
+        (
+          canManageCompany(resource.data.siteId, resource.data.companyId)
+          && resource.data.status == "signature_open"
+          && request.resource.data.status == "signature_open"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "signatureSessionId",
+            "updatedBy",
+            "updatedAt"
+          ])
+          && request.resource.data.signatureSessionId is string
+          && request.resource.data.updatedBy == request.auth.uid
+        )
+
+        ||
+
+        (
+          canManageCompany(resource.data.siteId, resource.data.companyId)
+          && resource.data.status == "signature_open"
+          && request.resource.data.status == "registered"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "status",
+            "registeredBy",
+            "registeredAt",
+            "preWorkChecks",
+            "preWorkCheckedBy",
+            "preWorkCheckedAt",
+            "updatedBy",
+            "updatedAt"
+          ])
+          && validPreWorkChecks(request.resource.data.preWorkChecks)
+          && request.resource.data.preWorkCheckedBy == request.auth.uid
+          && request.resource.data.registeredBy == request.auth.uid
+          && request.resource.data.updatedBy == request.auth.uid
+        )
+
+        ||
+
+        (
+          canStampKy(resource.data)
+          && resource.data.status == "registered"
+          && request.resource.data.status == "stamped"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "status",
+            "primeContractorStamps",
+            "stampedBy",
+            "stampedByName",
+            "stampedAt",
+            "stampText",
+            "updatedBy",
+            "updatedAt"
+          ])
+          && validPrimeContractorStamps()
+          && request.resource.data.stampedBy == request.auth.uid
+          && request.resource.data.stampedByName is string
+          && request.resource.data.stampText == "確認"
+          && request.resource.data.updatedBy == request.auth.uid
+        )
+
+        ||
+
+        (
+          canStampKy(resource.data)
+          && resource.data.status == "stamped"
+          && request.resource.data.status == "stamped"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "primeContractorStamps",
+            "updatedBy",
+            "updatedAt"
+          ])
+          && validPrimeContractorStamps()
+          && request.resource.data.updatedBy == request.auth.uid
+        )
+      );
+
+      allow delete: if false;
+    }
+
+    match /publicSiteViews/{siteViewToken} {
+      allow read: if resource.data.active == true;
+
+      allow create: if canManagePublicSite(request.resource.data.siteId)
+        && request.resource.data.keys().hasOnly([
+          "siteId",
+          "siteName",
+          "active",
+          "createdBy",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.siteId is string
+        && request.resource.data.siteName is string
+        && request.resource.data.active == true
+        && request.resource.data.createdBy == request.auth.uid;
+
+      allow update: if canManagePublicSiteView(siteViewToken)
+        && request.resource.data.keys().hasOnly([
+          "siteId",
+          "siteName",
+          "active",
+          "createdBy",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "siteId",
+          "siteName",
+          "active",
+          "updatedAt"
+        ])
+        && request.resource.data.siteId is string
+        && request.resource.data.siteName is string
+        && request.resource.data.active == true;
+
+      allow delete: if false;
+
+      match /kySummaries/{kyRecordId} {
+        allow read: if get(
+          /databases/$(database)/documents/publicSiteViews/$(siteViewToken)
+        ).data.active == true;
+
+        allow create, update: if canManagePublicSiteView(siteViewToken)
+          && validPublicKySummary();
+
+        allow delete: if canManagePublicSiteView(siteViewToken);
+
+        match /participantChecks/{participantCheckId} {
+          allow read: if get(
+            /databases/$(database)/documents/publicSiteViews/$(siteViewToken)
+          ).data.active == true;
+
+          allow create, update: if canManagePublicSiteView(siteViewToken)
+            && validPublicParticipantCheck();
+
+          allow delete: if canManagePublicSiteView(siteViewToken);
+        }
+      }
+    }
+
+    match /signatureSessions/{signatureToken} {
+      allow read: if resource.data.active == true
+        || canReadOrManageSignatureSession(resource.data);
+
+      allow create: if canManageCompany(
+          request.resource.data.siteId,
+          request.resource.data.companyId
+        )
+        && validSignatureSessionCreate();
+
+      allow update, delete: if false;
+
+      match /workerChecks/{workerCheckId} {
+        allow create: if request.auth != null
+          && get(/databases/$(database)/documents/signatureSessions/$(signatureToken)).data.active == true
+          && validWorkerCheckCreate()
+          && (
+            (
+              request.auth.token.firebase.sign_in_provider == "anonymous"
+              && request.resource.data.submittedByAuthType == "anonymous"
+            )
+            ||
+            (
+              isActiveUser()
+              && (
+                request.resource.data.submittedByAuthType == "password"
+                || request.resource.data.submittedByAuthType == "unknown"
+              )
+            )
+          );
+
+        allow read: if canReadOrManageSignatureSession(
+          get(/databases/$(database)/documents/signatureSessions/$(signatureToken)).data
+        );
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}
