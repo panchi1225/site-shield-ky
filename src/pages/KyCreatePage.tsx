@@ -121,8 +121,9 @@ export function KyCreatePage() {
 
     const kyRecordId = `${siteId}_${companyId}_${formState.workDate}`
 
+    const kyRecordRef = doc(db, 'kyRecords', kyRecordId)
+
     try {
-      const kyRecordRef = doc(db, 'kyRecords', kyRecordId)
       const snapshot = await getDoc(kyRecordRef)
 
       if (snapshot.exists()) {
@@ -131,7 +132,19 @@ export function KyCreatePage() {
         })
         return
       }
+    } catch (error) {
+      if (!isPermissionDeniedError(error)) {
+        setSubmitError(
+          error instanceof Error
+            ? error.message
+            : 'KY下書きの既存確認に失敗しました。',
+        )
+        setIsSubmitting(false)
+        return
+      }
+    }
 
+    try {
       await setDoc(kyRecordRef, {
         siteId,
         companyId,
@@ -157,7 +170,11 @@ export function KyCreatePage() {
       })
     } catch (error) {
       setSubmitError(
-        error instanceof Error ? error.message : 'KY下書きの保存に失敗しました。',
+        isPermissionDeniedError(error)
+          ? '保存できませんでした。同じ現場・会社・作業日のKYが既に存在する可能性があります。'
+          : error instanceof Error
+            ? error.message
+            : 'KY下書きの保存に失敗しました。',
       )
     } finally {
       setIsSubmitting(false)
@@ -489,5 +506,14 @@ function BackToCompanyLink({
     >
       会社作業トップへ戻る
     </Link>
+  )
+}
+
+function isPermissionDeniedError(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === 'permission-denied'
   )
 }
