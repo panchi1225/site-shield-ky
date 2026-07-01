@@ -10,7 +10,7 @@ import {
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore'
-import { auth, db } from '../lib/firebase'
+import { signatureAuth, signatureDb } from '../lib/firebase'
 import type { KyRecordWorkItem } from '../types/kyRecord'
 import type { SignatureSession } from '../types/signatureSession'
 import type {
@@ -80,7 +80,7 @@ function toSignatureSession(
 }
 
 function getAuthType(): SubmittedByAuthType {
-  const currentUser = auth.currentUser
+  const currentUser = signatureAuth.currentUser
 
   if (!currentUser) {
     return 'unknown'
@@ -156,7 +156,7 @@ export function SignPage() {
 
       try {
         const snapshot = await getDoc(
-          doc(db, 'signatureSessions', signatureToken),
+          doc(signatureDb, 'signatureSessions', signatureToken),
         )
 
         if (!isActive) {
@@ -318,11 +318,11 @@ export function SignPage() {
   }
 
   async function getSubmitter() {
-    if (auth.currentUser) {
-      return auth.currentUser
+    if (signatureAuth.currentUser) {
+      return signatureAuth.currentUser
     }
 
-    const credential = await signInAnonymously(auth)
+    const credential = await signInAnonymously(signatureAuth)
     return credential.user
   }
 
@@ -370,20 +370,23 @@ export function SignPage() {
         signatureHeight,
       )
 
-      await addDoc(collection(db, 'signatureSessions', token, 'workerChecks'), {
-        temperatureC: parsedTemperatureC,
-        alcoholMg: parsedAlcoholMg,
-        healthChecks,
-        medicationStatus,
-        medicationNote: medicationNote.trim(),
-        healthNote: healthNote.trim(),
-        signatureFormat: 'svg',
-        signatureData,
-        submittedByUid: submitter.uid,
-        submittedByAuthType,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      })
+      await addDoc(
+        collection(signatureDb, 'signatureSessions', token, 'workerChecks'),
+        {
+          temperatureC: parsedTemperatureC,
+          alcoholMg: parsedAlcoholMg,
+          healthChecks,
+          medicationStatus,
+          medicationNote: medicationNote.trim(),
+          healthNote: healthNote.trim(),
+          signatureFormat: 'svg',
+          signatureData,
+          submittedByUid: submitter.uid,
+          submittedByAuthType,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+      )
 
       setSuccessMessage('登録しました。次の作業員を入力してください。')
       setLocalSubmitCount((current) => current + 1)

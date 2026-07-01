@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app'
+import { getApps, initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
@@ -10,6 +10,14 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
 }
 
-export const firebaseApp = initializeApp(firebaseConfig)
+export const firebaseApp =
+  getApps().find((app) => app.name === '[DEFAULT]') ??
+  initializeApp(firebaseConfig)
 export const auth = getAuth(firebaseApp)
 export const db = getFirestore(firebaseApp)
+
+export const signatureFirebaseApp =
+  getApps().find((app) => app.name === 'signature') ??
+  initializeApp(firebaseConfig, 'signature')
+export const signatureAuth = getAuth(signatureFirebaseApp)
+export const signatureDb = getFirestore(signatureFirebaseApp)

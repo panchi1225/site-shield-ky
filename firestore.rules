@@ -62,6 +62,15 @@ service cloud.firestore {
       return canReadCompany(siteId, companyId);
     }
 
+    function canRegisterKy(ky) {
+      return isAdmin()
+        || (isPrimeManager() && hasAssignedSite(ky.siteId))
+        || (
+          isSubcontractorManager()
+          && ky.createdBy == request.auth.uid
+        );
+    }
+
     function canStampKy(ky) {
       return isAdmin() || (isPrimeManager() && hasAssignedSite(ky.siteId));
     }
@@ -173,16 +182,43 @@ service cloud.firestore {
         && value.commandSystem == true;
     }
 
-    function validOptionalPreWorkChecks(value) {
-      return value == null || (
-        value is map
-        && value.properClothing is bool
-        && value.qualifiedPersonnel is bool
-        && value.understandsRisksAndMeasures is bool
-        && value.understandsProcedure is bool
-        && value.signalCoordination is bool
-        && value.commandSystem is bool
-      );
+    function validOptionalPublicKySummaryPreWorkChecks() {
+      return !request.resource.data.keys().hasAny(["preWorkChecks"])
+        || (
+          request.resource.data.preWorkChecks is map
+          && request.resource.data.preWorkChecks.properClothing is bool
+          && request.resource.data.preWorkChecks.qualifiedPersonnel is bool
+          && request.resource.data.preWorkChecks.understandsRisksAndMeasures is bool
+          && request.resource.data.preWorkChecks.understandsProcedure is bool
+          && request.resource.data.preWorkChecks.signalCoordination is bool
+          && request.resource.data.preWorkChecks.commandSystem is bool
+        );
+    }
+
+    function validOptionalPublicParticipantPreWorkChecks() {
+      return !request.resource.data.keys().hasAny(["preWorkChecks"])
+        || (
+          request.resource.data.preWorkChecks is map
+          && request.resource.data.preWorkChecks.properClothing is bool
+          && request.resource.data.preWorkChecks.qualifiedPersonnel is bool
+          && request.resource.data.preWorkChecks.understandsRisksAndMeasures is bool
+          && request.resource.data.preWorkChecks.understandsProcedure is bool
+          && request.resource.data.preWorkChecks.signalCoordination is bool
+          && request.resource.data.preWorkChecks.commandSystem is bool
+        );
+    }
+
+    function validOptionalWorkerPreWorkChecks() {
+      return !request.resource.data.keys().hasAny(["preWorkChecks"])
+        || (
+          request.resource.data.preWorkChecks is map
+          && request.resource.data.preWorkChecks.properClothing is bool
+          && request.resource.data.preWorkChecks.qualifiedPersonnel is bool
+          && request.resource.data.preWorkChecks.understandsRisksAndMeasures is bool
+          && request.resource.data.preWorkChecks.understandsProcedure is bool
+          && request.resource.data.preWorkChecks.signalCoordination is bool
+          && request.resource.data.preWorkChecks.commandSystem is bool
+        );
     }
 
     function validPrimeStamp(stamp) {
@@ -240,7 +276,7 @@ service cloud.firestore {
         && request.resource.data.workItems.size() <= 4
         && request.resource.data.primeContractorStamps is list
         && request.resource.data.primeContractorStamps.size() <= 3
-        && validOptionalPreWorkChecks(request.resource.data.preWorkChecks)
+        && validOptionalPublicKySummaryPreWorkChecks()
         && request.resource.data.participantCount is number;
     }
 
@@ -272,7 +308,7 @@ service cloud.firestore {
         )
         && request.resource.data.medicationNote is string
         && request.resource.data.healthNote is string
-        && validOptionalPreWorkChecks(request.resource.data.preWorkChecks)
+        && validOptionalPublicParticipantPreWorkChecks()
         && request.resource.data.createdAtText is string;
     }
 
@@ -342,7 +378,7 @@ service cloud.firestore {
           || request.resource.data.medicationNote.size() > 0
         )
         && request.resource.data.healthNote is string
-        && validOptionalPreWorkChecks(request.resource.data.preWorkChecks)
+        && validOptionalWorkerPreWorkChecks()
         && request.resource.data.signatureFormat == "svg"
         && request.resource.data.signatureData is string;
     }
@@ -432,7 +468,7 @@ service cloud.firestore {
         ||
 
         (
-          canManageCompany(resource.data.siteId, resource.data.companyId)
+          canRegisterKy(resource.data)
           && resource.data.status == "signature_open"
           && request.resource.data.status == "registered"
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -446,8 +482,8 @@ service cloud.firestore {
             "updatedAt"
           ])
           && validPreWorkChecks(request.resource.data.preWorkChecks)
-          && request.resource.data.preWorkCheckedBy == request.auth.uid
           && request.resource.data.registeredBy == request.auth.uid
+          && request.resource.data.preWorkCheckedBy == request.auth.uid
           && request.resource.data.updatedBy == request.auth.uid
         )
 
